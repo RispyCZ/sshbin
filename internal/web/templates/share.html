@@ -7,6 +7,6 @@
     {{if .Sharing.ExpiresAt}}<dt>Expires</dt><dd>{{.Sharing.ExpiresAt.Format "2006-01-02 15:04 MST"}}</dd>{{end}}
     {{if .Sharing.HasPassword}}<dt>Protected</dt><dd>Password required</dd>{{end}}
   </dl>
-  <button type="button" class="btn-primary" disabled title="Download lands with storage read support">Download</button>
+  <a class="btn-primary" href="{{.DownloadURL}}" download>Download</a>
 </section>
 {{end}}

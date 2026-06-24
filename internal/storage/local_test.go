@@ -2,6 +2,7 @@ package storage_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -47,6 +48,33 @@ func TestLocalStorage_DuplicateID(t *testing.T) {
 	_, err = s.Create(context.Background(), "id1", "file.txt")
 	if err == nil {
 		t.Fatal("expected error on duplicate, got nil")
+	}
+}
+
+func TestLocalStorage_OpenRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	s := &storage.LocalStorage{BaseDir: dir}
+
+	w, _ := s.Create(context.Background(), "id1", "file.txt")
+	io.WriteString(w, "payload")
+	w.Close()
+
+	rc, err := s.Open(context.Background(), "id1", "file.txt")
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer rc.Close()
+	got, _ := io.ReadAll(rc)
+	if string(got) != "payload" {
+		t.Errorf("read = %q, want %q", got, "payload")
+	}
+}
+
+func TestLocalStorage_OpenMissing(t *testing.T) {
+	s := &storage.LocalStorage{BaseDir: t.TempDir()}
+	_, err := s.Open(context.Background(), "nope", "x.txt")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
 

@@ -5,21 +5,27 @@ import (
 	"context"
 	"errors"
 	"log"
+	"mime"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/rispycz/securedrop/internal/auth"
 	"github.com/rispycz/securedrop/internal/sharing"
+	"github.com/rispycz/securedrop/internal/storage"
 )
 
 type handler struct {
 	repo          sharing.Repository
+	storage       storage.Storage
 	auth          *auth.Manager
 	baseURL       string
 	host          string
 	secureCookies bool
+	secret        []byte
 	tpl           *templates
 }
 
@@ -100,11 +106,14 @@ func (h *handler) shareView(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if s.HasPassword() {
+	if !h.hasPasswordGrant(r, s) {
 		h.render(w, http.StatusOK, "share_password", map[string]any{"Sharing": s})
 		return
 	}
-	h.render(w, http.StatusOK, "share", map[string]any{"Sharing": s})
+	h.render(w, http.StatusOK, "share", map[string]any{
+		"Sharing":     s,
+		"DownloadURL": "/s/" + s.ID + "/download",
+	})
 }
 
 func (h *handler) sharePassword(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +131,38 @@ func (h *handler) sharePassword(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	h.render(w, http.StatusOK, "share", map[string]any{"Sharing": s})
+	// Grant access, then redirect (POST/redirect/GET) so refresh and the
+	// download link work without re-prompting.
+	h.setPasswordGrant(w, s.ID)
+	http.Redirect(w, r, "/s/"+s.ID, http.StatusSeeOther)
+}
+
+func (h *handler) download(w http.ResponseWriter, r *http.Request) {
+	s, ok := h.accessibleShare(w, r)
+	if !ok {
+		return
+	}
+	if !h.hasPasswordGrant(r, s) {
+		http.Redirect(w, r, "/s/"+s.ID, http.StatusSeeOther)
+		return
+	}
+
+	rc, err := h.storage.Open(r.Context(), s.FileID, s.FileName)
+	if errors.Is(err, storage.ErrNotFound) {
+		h.render(w, http.StatusNotFound, "error", errData(http.StatusNotFound, "The file is no longer available."))
+		return
+	}
+	if err != nil {
+		log.Printf("open file %s: %v", s.FileID, err)
+		h.render(w, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not read the file."))
+		return
+	}
+	defer rc.Close()
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", contentDisposition(s.FileName))
+	modTime := s.CreatedAt
+	http.ServeContent(w, r, s.FileName, modTime, rc)
 }
 
 // accessibleShare resolves a share and enforces existence, configuration,
@@ -202,6 +242,25 @@ func (h *handler) render(w http.ResponseWriter, status int, page string, data an
 
 func errData(status int, msg string) map[string]any {
 	return map[string]any{"Status": status, "Message": msg}
+}
+
+// contentDisposition builds a safe attachment header, dropping path components
+// and control characters and letting mime encode non-ASCII names (RFC 2231).
+func contentDisposition(name string) string {
+	name = filepath.Base(name)
+	name = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, name)
+	if name == "" || name == "." {
+		name = "download"
+	}
+	if v := mime.FormatMediaType("attachment", map[string]string{"filename": name}); v != "" {
+		return v
+	}
+	return "attachment"
 }
 
 func parseExpiry(value string, now time.Time) *time.Time {

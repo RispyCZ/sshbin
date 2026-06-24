@@ -8,8 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"crypto/rand"
+
 	"github.com/rispycz/securedrop/internal/auth"
 	"github.com/rispycz/securedrop/internal/sharing"
+	"github.com/rispycz/securedrop/internal/storage"
 )
 
 const shutdownGrace = 10 * time.Second
@@ -20,13 +23,14 @@ type Config struct {
 }
 
 type Server struct {
-	cfg  Config
-	repo sharing.Repository
-	auth *auth.Manager
+	cfg     Config
+	repo    sharing.Repository
+	storage storage.Storage
+	auth    *auth.Manager
 }
 
-func New(cfg Config, repo sharing.Repository, authMgr *auth.Manager) *Server {
-	return &Server{cfg: cfg, repo: repo, auth: authMgr}
+func New(cfg Config, repo sharing.Repository, st storage.Storage, authMgr *auth.Manager) *Server {
+	return &Server{cfg: cfg, repo: repo, storage: st, auth: authMgr}
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
@@ -35,12 +39,19 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		return err
 	}
 
+	secret := make([]byte, 32)
+	if _, err := rand.Read(secret); err != nil {
+		return err
+	}
+
 	h := &handler{
 		repo:          s.repo,
+		storage:       s.storage,
 		auth:          s.auth,
 		baseURL:       s.cfg.BaseURL,
 		host:          hostFromURL(s.cfg.BaseURL),
 		secureCookies: strings.HasPrefix(s.cfg.BaseURL, "https://"),
+		secret:        secret,
 		tpl:           tpl,
 	}
 
@@ -54,6 +65,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.HandleFunc("POST /setup/{id}", h.requireSession(h.setupPost))
 	mux.HandleFunc("GET /s/{id}", h.shareView)
 	mux.HandleFunc("POST /s/{id}", h.sharePassword)
+	mux.HandleFunc("GET /s/{id}/download", h.download)
 	mux.Handle("GET /static/", http.FileServerFS(staticFS))
 
 	httpSrv := &http.Server{

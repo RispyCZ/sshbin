@@ -11,6 +11,7 @@ import (
 
 	"github.com/rispycz/securedrop/internal/auth"
 	"github.com/rispycz/securedrop/internal/sharing"
+	"github.com/rispycz/securedrop/internal/storage"
 )
 
 type testSender struct{ code string }
@@ -29,12 +30,27 @@ func newTestHandler(t *testing.T, repo sharing.Repository) (*handler, *testSende
 	sender := &testSender{}
 	h := &handler{
 		repo:    repo,
+		storage: &storage.LocalStorage{BaseDir: t.TempDir()},
 		auth:    auth.NewManager(sender, auth.Options{}),
 		baseURL: "http://example.com",
 		host:    "example.com",
+		secret:  []byte("test-secret-32-bytes-padding-xxx"),
 		tpl:     tpl,
 	}
 	return h, sender
+}
+
+// seedFile writes a stored file for a share so downloads have content.
+func seedFile(t *testing.T, h *handler, id, name, content string) {
+	t.Helper()
+	w, err := h.storage.Create(context.Background(), id, name)
+	if err != nil {
+		t.Fatalf("storage.Create: %v", err)
+	}
+	if _, err := w.Write([]byte(content)); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	w.Close()
 }
 
 func login(t *testing.T, h *handler, sender *testSender, email string) *http.Cookie {
@@ -239,22 +255,124 @@ func TestSharePassword_Gate(t *testing.T) {
 		t.Fatalf("wrong password status = %d, want 401", badRec.Code)
 	}
 
-	// Correct password -> share page.
+	// Correct password -> grant cookie + redirect (PRG).
 	ok := url.Values{"password": {"open-sesame"}}
 	okReq := httptest.NewRequest("POST", "/s/abc", strings.NewReader(ok.Encode()))
 	okReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	okReq.SetPathValue("id", "abc")
 	okRec := httptest.NewRecorder()
 	h.sharePassword(okRec, okReq)
-	if okRec.Code != http.StatusOK {
-		t.Fatalf("correct password status = %d, want 200", okRec.Code)
+	if okRec.Code != http.StatusSeeOther {
+		t.Fatalf("correct password status = %d, want 303 redirect", okRec.Code)
 	}
-	body := okRec.Body.String()
-	if !strings.Contains(body, "Shared file") {
-		t.Error("expected share page after correct password")
+	grant := grantCookieFrom(t, okRec)
+
+	// With the grant cookie, GET shows the share page, not the prompt.
+	viewReq := httptest.NewRequest("GET", "/s/abc", nil)
+	viewReq.AddCookie(grant)
+	viewReq.SetPathValue("id", "abc")
+	viewRec := httptest.NewRecorder()
+	h.shareView(viewRec, viewReq)
+	if body := viewRec.Body.String(); !strings.Contains(body, "Shared file") || strings.Contains(body, "Unlock") {
+		t.Error("grant cookie should reveal the share page without re-prompt")
 	}
-	if strings.Contains(body, "Unlock") {
-		t.Error("should not re-prompt (Unlock button present) after correct password")
+}
+
+func grantCookieFrom(t *testing.T, rec *httptest.ResponseRecorder) *http.Cookie {
+	t.Helper()
+	for _, c := range rec.Result().Cookies() {
+		if strings.HasPrefix(c.Name, "fd_pw_") {
+			return c
+		}
+	}
+	t.Fatal("no grant cookie set")
+	return nil
+}
+
+func TestDownload_PublicNoPassword(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileID: "abc", FileName: "f.txt", Configured: true, Public: true})
+	h, _ := newTestHandler(t, repo)
+	seedFile(t, h, "abc", "f.txt", "hello bytes")
+
+	req := httptest.NewRequest("GET", "/s/abc/download", nil)
+	req.SetPathValue("id", "abc")
+	rec := httptest.NewRecorder()
+
+	h.download(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if rec.Body.String() != "hello bytes" {
+		t.Errorf("body = %q, want file content", rec.Body.String())
+	}
+	if cd := rec.Header().Get("Content-Disposition"); !strings.Contains(cd, "f.txt") {
+		t.Errorf("Content-Disposition = %q", cd)
+	}
+}
+
+func TestDownload_PasswordRedirectsWithoutGrant(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	hash, _ := sharing.HashPassword("pw")
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileID: "abc", FileName: "f.txt", Configured: true, Public: true, PasswordHash: hash})
+	h, _ := newTestHandler(t, repo)
+	seedFile(t, h, "abc", "f.txt", "secret")
+
+	req := httptest.NewRequest("GET", "/s/abc/download", nil)
+	req.SetPathValue("id", "abc")
+	rec := httptest.NewRecorder()
+
+	h.download(rec, req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want 303 redirect to prompt", rec.Code)
+	}
+}
+
+func TestDownload_PasswordWithGrant(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	hash, _ := sharing.HashPassword("pw")
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileID: "abc", FileName: "f.txt", Configured: true, Public: true, PasswordHash: hash})
+	h, _ := newTestHandler(t, repo)
+	seedFile(t, h, "abc", "f.txt", "secret")
+
+	req := httptest.NewRequest("GET", "/s/abc/download", nil)
+	req.AddCookie(&http.Cookie{Name: grantCookieName("abc"), Value: h.grantValue("abc")})
+	req.SetPathValue("id", "abc")
+	rec := httptest.NewRecorder()
+
+	h.download(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 with valid grant", rec.Code)
+	}
+	if rec.Body.String() != "secret" {
+		t.Errorf("body = %q", rec.Body.String())
+	}
+}
+
+func TestDownload_ForgedGrantRejected(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	hash, _ := sharing.HashPassword("pw")
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileID: "abc", FileName: "f.txt", Configured: true, Public: true, PasswordHash: hash})
+	h, _ := newTestHandler(t, repo)
+	seedFile(t, h, "abc", "f.txt", "secret")
+
+	req := httptest.NewRequest("GET", "/s/abc/download", nil)
+	req.AddCookie(&http.Cookie{Name: grantCookieName("abc"), Value: "deadbeef"})
+	req.SetPathValue("id", "abc")
+	rec := httptest.NewRecorder()
+
+	h.download(rec, req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("forged grant status = %d, want 303 redirect", rec.Code)
+	}
+}
+
+func TestContentDisposition(t *testing.T) {
+	if got := contentDisposition("../../etc/passwd"); !strings.Contains(got, "passwd") || strings.Contains(got, "/") {
+		t.Errorf("path not stripped: %q", got)
+	}
+	if got := contentDisposition("a\r\nb.txt"); strings.ContainsAny(got, "\r\n") {
+		t.Errorf("control chars not stripped: %q", got)
 	}
 }
 

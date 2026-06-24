@@ -46,7 +46,7 @@ func main() {
 	webSrv := web.New(web.Config{
 		ListenAddr: *webAddr,
 		BaseURL:    *baseURL,
-	}, repo, authMgr)
+	}, repo, st, authMgr)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
