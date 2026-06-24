@@ -1,0 +1,38 @@
+{{define "title"}}Configure share — Filedrop{{end}}
+{{define "content"}}
+<section class="card">
+  <h1>Configure share</h1>
+  <p class="file-name">{{.Sharing.FileName}}</p>
+
+  {{if .Saved}}
+  <div class="notice success">
+    <p>Saved. Share this link:</p>
+    <div class="share-link">
+      <input type="text" readonly value="{{.ShareURL}}" data-copy>
+      <button type="button" class="btn-copy" data-copy-btn>Copy</button>
+    </div>
+  </div>
+  {{end}}
+
+  <form method="post" class="settings-form">
+    <fieldset>
+      <legend>Expiry</legend>
+      <label><input type="radio" name="expires" value="1h" {{if eq .Expires "1h"}}checked{{end}}> 1 hour</label>
+      <label><input type="radio" name="expires" value="24h" {{if eq .Expires "24h"}}checked{{end}}> 24 hours</label>
+      <label><input type="radio" name="expires" value="168h" {{if eq .Expires "168h"}}checked{{end}}> 7 days</label>
+      <label><input type="radio" name="expires" value="never" {{if eq .Expires "never"}}checked{{end}}> Never</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Access</legend>
+      <label class="check"><input type="checkbox" name="public" {{if .Sharing.Public}}checked{{end}}> Public — anyone with the link</label>
+      <label class="field">
+        <span>Password (optional)</span>
+        <input type="password" name="password" autocomplete="new-password" placeholder="{{if .Sharing.HasPassword}}leave blank to keep current{{else}}no password{{end}}">
+      </label>
+    </fieldset>
+
+    <button type="submit" class="btn-primary">Save settings</button>
+  </form>
+</section>
+{{end}}

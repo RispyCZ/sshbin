@@ -1,0 +1,23 @@
+{{define "base.html" -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{block "title" .}}Filedrop{{end}}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">filedrop</a>
+  </header>
+  <main class="container">
+    {{block "content" .}}{{end}}
+  </main>
+  <footer class="site-footer">
+    <span>Share files from any server over plain SSH.</span>
+  </footer>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
+{{- end}}

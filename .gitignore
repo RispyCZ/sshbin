@@ -1,5 +1,5 @@
 # Binaries
-/sftpd
+/filedrop
 *.exe
 *.out
 
@@ -24,3 +24,7 @@ vendor/
 .DS_Store
 .idea/
 .vscode/
+
+# Tooling artifacts
+.playwright-mcp/
+*.png

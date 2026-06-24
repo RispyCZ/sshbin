@@ -2,7 +2,6 @@ package sharing
 
 import (
 	"context"
-	"fmt"
 	"sync"
 )
 
@@ -27,7 +26,17 @@ func (r *MemoryRepository) Get(ctx context.Context, id string) (Sharing, error) 
 	defer r.mu.RUnlock()
 	s, ok := r.records[id]
 	if !ok {
-		return Sharing{}, fmt.Errorf("sharing %q not found", id)
+		return Sharing{}, ErrNotFound
 	}
 	return s, nil
+}
+
+func (r *MemoryRepository) Update(ctx context.Context, s Sharing) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.records[s.ID]; !ok {
+		return ErrNotFound
+	}
+	r.records[s.ID] = s
+	return nil
 }

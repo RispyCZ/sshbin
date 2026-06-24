@@ -1,0 +1,31 @@
+{{define "title"}}Filedrop — share files over SSH{{end}}
+{{define "content"}}
+<section class="hero">
+  <h1>Drop a file. Share a link.</h1>
+  <p class="lead">Upload straight from any server with the tools you already have — no account, no client to install.</p>
+
+  <ol class="steps">
+    <li>
+      <span class="step-num">1</span>
+      <div>
+        <h3>Upload over SSH</h3>
+        <pre class="cmd"><code>scp my-log-file.log {{.Host}}:</code></pre>
+      </div>
+    </li>
+    <li>
+      <span class="step-num">2</span>
+      <div>
+        <h3>Configure</h3>
+        <p>Open the setup link printed in your terminal to set expiry, a password, or access policy.</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-num">3</span>
+      <div>
+        <h3>Share</h3>
+        <p>Send the link or QR code to anyone.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+{{end}}
