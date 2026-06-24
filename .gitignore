@@ -1,0 +1,26 @@
+# Binaries
+/sftpd
+*.exe
+*.out
+
+# SSH host keys (private key material — never commit)
+host_key
+host_key.pub
+*.pem
+
+# Runtime upload storage
+/uploads/
+
+# Local test artifacts
+/myfile.log
+/localhost
+
+# Go
+*.test
+*.prof
+vendor/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
