@@ -31,7 +31,7 @@ func newTestHandler(t *testing.T, repo sharing.Repository) (*handler, *testSende
 	h := &handler{
 		repo:    repo,
 		storage: &storage.LocalStorage{BaseDir: t.TempDir()},
-		auth:    auth.NewManager(sender, auth.Options{}),
+		auth:    auth.NewManager(sender, auth.NewMemorySessionStore(), auth.Options{}),
 		baseURL: "http://example.com",
 		host:    "example.com",
 		secret:  []byte("test-secret-32-bytes-padding-xxx"),

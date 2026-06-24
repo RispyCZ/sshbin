@@ -15,7 +15,7 @@ func (c *captureSender) Send(_ context.Context, dest, code string) error {
 }
 
 func newManager(s Sender) *Manager {
-	return NewManager(s, Options{MaxAttempts: 3})
+	return NewManager(s, NewMemorySessionStore(), Options{MaxAttempts: 3})
 }
 
 func TestVerify_HappyPath(t *testing.T) {
@@ -74,7 +74,7 @@ func TestVerify_TooManyAttempts(t *testing.T) {
 
 func TestVerify_Expired(t *testing.T) {
 	cs := &captureSender{}
-	m := NewManager(cs, Options{OTPTTL: time.Minute})
+	m := NewManager(cs, NewMemorySessionStore(), Options{OTPTTL: time.Minute})
 	now := time.Now()
 	m.now = func() time.Time { return now }
 	m.StartLogin(context.Background(), "a@b.com")
@@ -87,8 +87,10 @@ func TestVerify_Expired(t *testing.T) {
 
 func TestSession_ExpiryAndLogout(t *testing.T) {
 	cs := &captureSender{}
-	m := NewManager(cs, Options{SessionTTL: time.Hour})
+	store := NewMemorySessionStore()
 	now := time.Now()
+	store.now = func() time.Time { return now }
+	m := NewManager(cs, store, Options{SessionTTL: time.Hour})
 	m.now = func() time.Time { return now }
 	m.StartLogin(context.Background(), "a@b.com")
 	token, _, _ := m.Verify("a@b.com", cs.lastCode)
@@ -101,7 +103,7 @@ func TestSession_ExpiryAndLogout(t *testing.T) {
 	// fresh session, then expire by clock
 	m.StartLogin(context.Background(), "a@b.com")
 	token2, _, _ := m.Verify("a@b.com", cs.lastCode)
-	m.now = func() time.Time { return now.Add(2 * time.Hour) }
+	store.now = func() time.Time { return now.Add(2 * time.Hour) }
 	if _, ok := m.Session(token2); ok {
 		t.Error("expired session should not be valid")
 	}

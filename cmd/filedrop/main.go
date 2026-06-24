@@ -12,7 +12,7 @@ import (
 
 	"github.com/rispycz/securedrop/internal/auth"
 	"github.com/rispycz/securedrop/internal/sftpd"
-	"github.com/rispycz/securedrop/internal/sharing"
+	"github.com/rispycz/securedrop/internal/sqlstore"
 	"github.com/rispycz/securedrop/internal/storage"
 	"github.com/rispycz/securedrop/internal/web"
 )
@@ -23,15 +23,27 @@ func main() {
 	hostKeyPath := flag.String("host-key", "host_key", "path to SSH host key (generated if missing)")
 	baseURL := flag.String("base-url", "http://localhost:8080", "base URL for setup and share links")
 	storageDir := flag.String("storage", "uploads", "directory for uploaded files")
+	dsn := flag.String("db", "sqlite://filedrop.db", "database DSN (e.g. sqlite://filedrop.db)")
 	flag.Parse()
 
 	if err := os.MkdirAll(*storageDir, 0o750); err != nil {
 		log.Fatalf("create storage dir: %v", err)
 	}
 
-	// One repository instance shared by both servers: SFTP creates records,
+	db, err := sqlstore.Open(*dsn)
+	if err != nil {
+		log.Fatalf("open database: %v", err)
+	}
+	defer db.Close()
+
+	secret, err := db.EnsureSecret()
+	if err != nil {
+		log.Fatalf("load grant secret: %v", err)
+	}
+
+	// Shares are persisted and shared by both servers: SFTP creates records,
 	// the web UI reads and updates them.
-	repo := sharing.NewMemoryRepository()
+	repo := db.Shares()
 	st := &storage.LocalStorage{BaseDir: *storageDir}
 
 	sftpSrv := sftpd.New(sftpd.Config{
@@ -41,11 +53,12 @@ func main() {
 	}, st, repo)
 
 	// LogSender prints OTP codes to the log; replace with SMTP/SMS in production.
-	authMgr := auth.NewManager(auth.LogSender{}, auth.Options{})
+	authMgr := auth.NewManager(auth.LogSender{}, db.Sessions(), auth.Options{})
 
 	webSrv := web.New(web.Config{
 		ListenAddr: *webAddr,
 		BaseURL:    *baseURL,
+		Secret:     secret,
 	}, repo, st, authMgr)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

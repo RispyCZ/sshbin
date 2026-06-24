@@ -11,6 +11,11 @@ host_key.pub
 # Runtime upload storage
 /uploads/
 
+# Databases
+*.db
+*.db-shm
+*.db-wal
+
 # Local test artifacts
 /myfile.log
 /localhost

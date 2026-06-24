@@ -20,6 +20,10 @@ const shutdownGrace = 10 * time.Second
 type Config struct {
 	ListenAddr string
 	BaseURL    string
+	// Secret signs password-grant cookies. When empty a random one is generated
+	// per start (fine for tests; supply a persisted secret in production so
+	// grants survive restarts).
+	Secret []byte
 }
 
 type Server struct {
@@ -39,9 +43,12 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		return err
 	}
 
-	secret := make([]byte, 32)
-	if _, err := rand.Read(secret); err != nil {
-		return err
+	secret := s.cfg.Secret
+	if len(secret) == 0 {
+		secret = make([]byte, 32)
+		if _, err := rand.Read(secret); err != nil {
+			return err
+		}
 	}
 
 	h := &handler{

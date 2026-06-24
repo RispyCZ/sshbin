@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 	"sync"
@@ -50,24 +51,25 @@ func defaults(o Options) Options {
 	return o
 }
 
-// Manager issues one-time codes and manages verified sessions in memory.
+// Manager issues one-time codes and manages verified sessions. Sessions live in
+// a SessionStore; OTP challenges are kept in memory (short-lived).
 type Manager struct {
-	sender Sender
-	opts   Options
-	now    func() time.Time
+	sender   Sender
+	sessions SessionStore
+	opts     Options
+	now      func() time.Time
 
 	mu         sync.Mutex
 	challenges map[string]challenge // keyed by normalized email
-	sessions   map[string]Session   // keyed by session token
 }
 
-func NewManager(sender Sender, opts Options) *Manager {
+func NewManager(sender Sender, sessions SessionStore, opts Options) *Manager {
 	return &Manager{
 		sender:     sender,
+		sessions:   sessions,
 		opts:       defaults(opts),
 		now:        time.Now,
 		challenges: make(map[string]challenge),
-		sessions:   make(map[string]Session),
 	}
 }
 
@@ -127,29 +129,26 @@ func (m *Manager) Verify(email, code string) (string, Session, error) {
 		return "", Session{}, err
 	}
 	sess := Session{Email: email, ExpiresAt: m.now().Add(m.opts.SessionTTL)}
-	m.sessions[token] = sess
+	if err := m.sessions.Put(token, sess); err != nil {
+		return "", Session{}, err
+	}
 	return token, sess, nil
 }
 
 // Session returns the session for a token if it exists and has not expired.
 func (m *Manager) Session(token string) (Session, bool) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	s, ok := m.sessions[token]
-	if !ok {
+	s, ok, err := m.sessions.Get(token)
+	if err != nil {
+		log.Printf("auth: session lookup: %v", err)
 		return Session{}, false
 	}
-	if m.now().After(s.ExpiresAt) {
-		delete(m.sessions, token)
-		return Session{}, false
-	}
-	return s, true
+	return s, ok
 }
 
 func (m *Manager) Logout(token string) {
-	m.mu.Lock()
-	delete(m.sessions, token)
-	m.mu.Unlock()
+	if err := m.sessions.Delete(token); err != nil {
+		log.Printf("auth: session delete: %v", err)
+	}
 }
 
 func generateCode() (string, error) {
