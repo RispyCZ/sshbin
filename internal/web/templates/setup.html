@@ -24,10 +24,19 @@
     </fieldset>
 
     <fieldset>
-      <legend>Access</legend>
-      <label class="check"><input type="checkbox" name="public" {{if .Sharing.Public}}checked{{end}}> Public — anyone with the link</label>
+      <legend>Visibility</legend>
+      <label><input type="radio" name="visibility" value="public" {{if .Sharing.Public}}checked{{end}}> Public — anyone with the link</label>
+      <label><input type="radio" name="visibility" value="private" {{if not .Sharing.Public}}checked{{end}}> Private — only people I list</label>
+      <label class="field" data-private-only>
+        <span>Allowed emails (one per line)</span>
+        <textarea name="emails" rows="3" placeholder="alice@example.com">{{.Emails}}</textarea>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Password</legend>
       <label class="field">
-        <span>Password (optional)</span>
+        <span>Extra password (optional)</span>
         <input type="password" name="password" autocomplete="new-password" placeholder="{{if .Sharing.HasPassword}}leave blank to keep current{{else}}no password{{end}}">
       </label>
     </fieldset>

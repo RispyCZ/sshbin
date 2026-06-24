@@ -5,8 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/rispycz/securedrop/internal/auth"
 	"github.com/rispycz/securedrop/internal/sharing"
 )
 
@@ -20,10 +22,11 @@ type Config struct {
 type Server struct {
 	cfg  Config
 	repo sharing.Repository
+	auth *auth.Manager
 }
 
-func New(cfg Config, repo sharing.Repository) *Server {
-	return &Server{cfg: cfg, repo: repo}
+func New(cfg Config, repo sharing.Repository, authMgr *auth.Manager) *Server {
+	return &Server{cfg: cfg, repo: repo, auth: authMgr}
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
@@ -33,17 +36,24 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 
 	h := &handler{
-		repo:    s.repo,
-		baseURL: s.cfg.BaseURL,
-		host:    hostFromURL(s.cfg.BaseURL),
-		tpl:     tpl,
+		repo:          s.repo,
+		auth:          s.auth,
+		baseURL:       s.cfg.BaseURL,
+		host:          hostFromURL(s.cfg.BaseURL),
+		secureCookies: strings.HasPrefix(s.cfg.BaseURL, "https://"),
+		tpl:           tpl,
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", h.index)
-	mux.HandleFunc("GET /setup/{id}", h.setupGet)
-	mux.HandleFunc("POST /setup/{id}", h.setupPost)
+	mux.HandleFunc("GET /login", h.loginGet)
+	mux.HandleFunc("POST /login", h.loginPost)
+	mux.HandleFunc("POST /verify", h.verifyPost)
+	mux.HandleFunc("POST /logout", h.logout)
+	mux.HandleFunc("GET /setup/{id}", h.requireSession(h.setupGet))
+	mux.HandleFunc("POST /setup/{id}", h.requireSession(h.setupPost))
 	mux.HandleFunc("GET /s/{id}", h.shareView)
+	mux.HandleFunc("POST /s/{id}", h.sharePassword)
 	mux.Handle("GET /static/", http.FileServerFS(staticFS))
 
 	httpSrv := &http.Server{

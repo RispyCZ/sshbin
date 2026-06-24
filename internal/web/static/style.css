@@ -106,6 +106,37 @@ h1 { letter-spacing: -.02em; }
   padding: 1.75rem;
 
   &.center { text-align: center; }
+  &.narrow { max-width: 26rem; margin-inline: auto; }
+}
+
+[data-private-only][hidden] { display: none; }
+
+.notice.error-notice {
+  background: color-mix(in srgb, #d33 14%, transparent);
+  border: 1px solid #d33;
+  margin-bottom: 1rem;
+}
+
+.btn-link {
+  background: none;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.resend { margin-top: 1rem; }
+
+textarea {
+  padding: .55rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
 }
 
 .file-name {

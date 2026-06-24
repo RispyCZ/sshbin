@@ -1,0 +1,22 @@
+{{define "title"}}Enter code — Filedrop{{end}}
+{{define "content"}}
+<section class="card narrow">
+  <h1>Enter code</h1>
+  <p class="lead">We sent a 6-digit code to <strong>{{.Email}}</strong>.</p>
+  {{if .Error}}<div class="notice error-notice">{{.Error}}</div>{{end}}
+  <form method="post" action="/verify" class="settings-form">
+    <input type="hidden" name="email" value="{{.Email}}">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <label class="field">
+      <span>Code</span>
+      <input type="text" name="code" required autofocus inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+    </label>
+    <button type="submit" class="btn-primary">Verify</button>
+  </form>
+  <form method="post" action="/login" class="resend">
+    <input type="hidden" name="email" value="{{.Email}}">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <button type="submit" class="btn-link">Resend code</button>
+  </form>
+</section>
+{{end}}

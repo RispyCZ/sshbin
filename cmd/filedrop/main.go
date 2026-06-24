@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/rispycz/securedrop/internal/auth"
 	"github.com/rispycz/securedrop/internal/sftpd"
 	"github.com/rispycz/securedrop/internal/sharing"
 	"github.com/rispycz/securedrop/internal/storage"
@@ -39,10 +40,13 @@ func main() {
 		BaseURL:     *baseURL,
 	}, st, repo)
 
+	// LogSender prints OTP codes to the log; replace with SMTP/SMS in production.
+	authMgr := auth.NewManager(auth.LogSender{}, auth.Options{})
+
 	webSrv := web.New(web.Config{
 		ListenAddr: *webAddr,
 		BaseURL:    *baseURL,
-	}, repo)
+	}, repo, authMgr)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
