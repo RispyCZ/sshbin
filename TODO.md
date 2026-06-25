@@ -1,7 +1,11 @@
-1. Use proper VFS to have abstraction above actual storage layer
-2. Add SSH auth via keys? passwords?
-3. Build docs page
-4. Add LiCENCE
-5. S3 as backend storage (requires VFS)
-6. Support different SFTP clients outside scp, winscp? sftp?
-7. Use logger eg, logrus, uber/zap
+- Use proper VFS to have abstraction above actual storage layer
+- Add SSH auth via keys? passwords?
+- Build docs page
+- Add LiCENCE
+- S3 as backend storage (requires VFS)
+- Support different SFTP clients outside scp, winscp? sftp?
+- Use logger eg, logrus, uber/zap
+- Add full profile page (delete account + data)
+- Shares overview + CRUD
+- Providers for sending OTP code
+- Auth methods
