@@ -11,8 +11,8 @@ import (
 	"github.com/charmbracelet/wish"
 	"github.com/pkg/sftp"
 
-	"github.com/rispycz/securedrop/internal/sharing"
-	"github.com/rispycz/securedrop/internal/storage"
+	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/storage"
 )
 
 const shutdownGrace = 10 * time.Second
@@ -37,7 +37,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	srv, err := wish.NewServer(
 		wish.WithAddress(s.cfg.ListenAddr),
 		wish.WithHostKeyPath(s.cfg.HostKeyPath),
-		wish.WithVersion("filedrop"),
+		wish.WithVersion("sshbin"),
 		wish.WithSubsystem("sftp", s.handleSFTP),
 	)
 	if err != nil {

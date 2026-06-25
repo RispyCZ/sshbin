@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rispycz/securedrop/internal/storage"
+	"github.com/rispycz/sshbin/internal/storage"
 )
 
 func TestLocalStorage_CreateAndRead(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/rispycz/securedrop/internal/sftpd"
+	"github.com/rispycz/sshbin/internal/sftpd"
 )
 
 type mockChannel struct {

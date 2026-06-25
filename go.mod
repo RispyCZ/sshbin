@@ -1,4 +1,4 @@
-module github.com/rispycz/securedrop
+module github.com/rispycz/sshbin
 
 go 1.26.3
 

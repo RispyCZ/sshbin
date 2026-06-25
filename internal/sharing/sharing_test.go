@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rispycz/securedrop/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sharing"
 )
 
 func TestMemoryRepository_CreateAndGet(t *testing.T) {

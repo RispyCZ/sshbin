@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rispycz/securedrop/internal/auth"
+	"github.com/rispycz/sshbin/internal/auth"
 )
 
 // SessionStore implements auth.SessionStore over database/sql.

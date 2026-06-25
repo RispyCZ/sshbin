@@ -18,7 +18,7 @@ type Store struct {
 
 // Open parses a DSN of the form "<scheme>://<target>" and returns a Store with
 // migrations applied. Only "sqlite" is wired today, e.g.
-// "sqlite://filedrop.db" or "sqlite://:memory:".
+// "sqlite://sshbin.db" or "sqlite://:memory:".
 func Open(dsn string) (*Store, error) {
 	scheme, target, ok := strings.Cut(dsn, "://")
 	if !ok {

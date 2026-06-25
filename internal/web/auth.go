@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rispycz/securedrop/internal/auth"
+	"github.com/rispycz/sshbin/internal/auth"
 )
 
 const sessionCookie = "fd_session"

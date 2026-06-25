@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rispycz/securedrop/internal/auth"
-	"github.com/rispycz/securedrop/internal/sharing"
-	"github.com/rispycz/securedrop/internal/sqlstore"
+	"github.com/rispycz/sshbin/internal/auth"
+	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sqlstore"
 )
 
 func openTemp(t *testing.T) *sqlstore.Store {

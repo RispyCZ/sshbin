@@ -47,7 +47,7 @@ var (
 func setupBanner(fileName, url string) string {
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
-		bannerTitle.Render("Filedrop"),
+		bannerTitle.Render("Sshbin"),
 		bannerStatus.Render(sanitizeName(fileName)+" uploaded. Finish setup:"),
 		bannerLink.Render(url),
 	)

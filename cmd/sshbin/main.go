@@ -10,11 +10,11 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/rispycz/securedrop/internal/auth"
-	"github.com/rispycz/securedrop/internal/sftpd"
-	"github.com/rispycz/securedrop/internal/sqlstore"
-	"github.com/rispycz/securedrop/internal/storage"
-	"github.com/rispycz/securedrop/internal/web"
+	"github.com/rispycz/sshbin/internal/auth"
+	"github.com/rispycz/sshbin/internal/sftpd"
+	"github.com/rispycz/sshbin/internal/sqlstore"
+	"github.com/rispycz/sshbin/internal/storage"
+	"github.com/rispycz/sshbin/internal/web"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 	hostKeyPath := flag.String("host-key", "host_key", "path to SSH host key (generated if missing)")
 	baseURL := flag.String("base-url", "http://localhost:8080", "base URL for setup and share links")
 	storageDir := flag.String("storage", "uploads", "directory for uploaded files")
-	dsn := flag.String("db", "sqlite://filedrop.db", "database DSN (e.g. sqlite://filedrop.db)")
+	dsn := flag.String("db", "sqlite://sshbin.db", "database DSN (e.g. sqlite://sshbin.db)")
 	flag.Parse()
 
 	if err := os.MkdirAll(*storageDir, 0o750); err != nil {
@@ -68,7 +68,7 @@ func main() {
 	g.Go(func() error { return sftpSrv.ListenAndServe(ctx) })
 	g.Go(func() error { return webSrv.ListenAndServe(ctx) })
 
-	log.Printf("filedrop: sftp %s, web %s", *sftpAddr, *webAddr)
+	log.Printf("sshbin: sftp %s, web %s", *sftpAddr, *webAddr)
 	if err := g.Wait(); err != nil {
 		log.Fatalf("server: %v", err)
 	}

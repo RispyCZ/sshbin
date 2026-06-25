@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"net/http"
 
-	"github.com/rispycz/securedrop/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sharing"
 )
 
 // Password grants are stateless: a correct password sets a cookie holding an

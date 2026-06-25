@@ -14,9 +14,9 @@ import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/rispycz/securedrop/internal/sharing"
-	"github.com/rispycz/securedrop/internal/sftpd"
-	"github.com/rispycz/securedrop/internal/storage"
+	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sftpd"
+	"github.com/rispycz/sshbin/internal/storage"
 )
 
 func startServer(t *testing.T, storageDir string) (addr string, repo *sharing.MemoryRepository) {

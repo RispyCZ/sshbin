@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rispycz/securedrop/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sharing"
 )
 
 // ShareRepo implements sharing.Repository over database/sql.

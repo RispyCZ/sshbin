@@ -1,4 +1,4 @@
-Filedrop is filesharing software written golang to be portable and lightweight.
+Sshbin is filesharing software written golang to be portable and lightweight.
 
 # WebUI
 Use go templates and vanilla JS + CSS can use MDN MCP server when search docs.

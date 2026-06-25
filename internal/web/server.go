@@ -10,9 +10,9 @@ import (
 
 	"crypto/rand"
 
-	"github.com/rispycz/securedrop/internal/auth"
-	"github.com/rispycz/securedrop/internal/sharing"
-	"github.com/rispycz/securedrop/internal/storage"
+	"github.com/rispycz/sshbin/internal/auth"
+	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/storage"
 )
 
 const shutdownGrace = 10 * time.Second
