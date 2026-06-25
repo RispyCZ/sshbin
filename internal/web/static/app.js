@@ -1,3 +1,20 @@
+// User menu dropdown
+const userToggle = document.querySelector(".user-toggle");
+const userDropdown = document.querySelector(".user-dropdown");
+if (userToggle && userDropdown) {
+  userToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = userToggle.getAttribute("aria-expanded") === "true";
+    userToggle.setAttribute("aria-expanded", String(!open));
+    userDropdown.hidden = open;
+  });
+  document.addEventListener("click", () => {
+    userToggle.setAttribute("aria-expanded", "false");
+    userDropdown.hidden = true;
+  });
+  userDropdown.addEventListener("click", (e) => e.stopPropagation());
+}
+
 // Toggle the allowed-emails field based on the selected visibility.
 const visibilityInputs = document.querySelectorAll('input[name="visibility"]');
 const privateOnly = document.querySelector("[data-private-only]");

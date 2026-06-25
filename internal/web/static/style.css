@@ -99,6 +99,12 @@ body {
 .site-header, .site-footer {
   padding: 1rem 1.5rem;
 }
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 .site-footer {
   margin-top: auto;
   color: var(--muted);
@@ -308,3 +314,111 @@ input[type=checkbox] { accent-color: var(--accent); }
 }
 
 .error-code { font-size: 3rem; margin: 0; }
+
+/* ── Header nav ─────────────────── */
+.btn-signin {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: .3rem .85rem;
+  transition: background .15s, color .15s;
+
+  &:hover {
+    background: var(--accent);
+    color: var(--accent-text);
+  }
+}
+
+/* ── User menu ───────────────────── */
+.user-menu {
+  position: relative;
+}
+
+.user-toggle {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: .3rem .6rem .3rem .35rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: .85rem;
+  color: var(--text);
+  transition: border-color .15s, background .15s;
+
+  &:hover { background: var(--surface); border-color: var(--green-300); }
+}
+
+.user-avatar {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.user-email {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform .2s;
+}
+.user-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + .4rem);
+  min-width: 13rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--text) 10%, transparent);
+  padding: .5rem;
+  z-index: 100;
+}
+
+.dropdown-email {
+  display: block;
+  font-size: .8rem;
+  color: var(--muted);
+  padding: .3rem .5rem .6rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: .35rem;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  padding: .45rem .5rem;
+  font: inherit;
+  font-size: .9rem;
+  color: var(--text);
+  cursor: pointer;
+
+  &:hover { background: var(--surface-active); }
+}

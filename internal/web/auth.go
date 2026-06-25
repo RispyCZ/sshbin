@@ -58,31 +58,31 @@ func (h *handler) requireSession(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func (h *handler) loginGet(w http.ResponseWriter, r *http.Request) {
-	h.render(w, http.StatusOK, "login", map[string]any{"Next": safeNext(r.URL.Query().Get("next"))})
+	h.render(w, r,http.StatusOK, "login", map[string]any{"Next": safeNext(r.URL.Query().Get("next"))})
 }
 
 func (h *handler) loginPost(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.render(w, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
+		h.render(w, r,http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
 		return
 	}
 	email := strings.TrimSpace(r.FormValue("email"))
 	next := safeNext(r.FormValue("next"))
 	if email == "" {
-		h.render(w, http.StatusBadRequest, "login", map[string]any{"Next": next, "Error": "Enter an email address."})
+		h.render(w, r,http.StatusBadRequest, "login", map[string]any{"Next": next, "Error": "Enter an email address."})
 		return
 	}
 	if err := h.auth.StartLogin(r.Context(), email); err != nil {
 		log.Printf("start login: %v", err)
-		h.render(w, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not send a code."))
+		h.render(w, r,http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not send a code."))
 		return
 	}
-	h.render(w, http.StatusOK, "verify", map[string]any{"Email": email, "Next": next})
+	h.render(w, r,http.StatusOK, "verify", map[string]any{"Email": email, "Next": next})
 }
 
 func (h *handler) verifyPost(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.render(w, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
+		h.render(w, r,http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
 		return
 	}
 	email := strings.TrimSpace(r.FormValue("email"))
@@ -91,7 +91,7 @@ func (h *handler) verifyPost(w http.ResponseWriter, r *http.Request) {
 
 	token, sess, err := h.auth.Verify(email, code)
 	if err != nil {
-		h.render(w, http.StatusUnauthorized, "verify", map[string]any{
+		h.render(w, r,http.StatusUnauthorized, "verify", map[string]any{
 			"Email": email, "Next": next, "Error": verifyError(err),
 		})
 		return

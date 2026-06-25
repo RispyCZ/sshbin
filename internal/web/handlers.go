@@ -2,7 +2,6 @@ package web
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"log"
 	"mime"
@@ -36,32 +35,32 @@ var expiryPresets = map[string]time.Duration{
 }
 
 func (h *handler) index(w http.ResponseWriter, r *http.Request) {
-	h.render(w, http.StatusOK, "index", map[string]any{"Host": h.host})
+	h.render(w, r, http.StatusOK, "index", map[string]any{"Host": h.host})
 }
 
 func (h *handler) setupGet(w http.ResponseWriter, r *http.Request) {
-	s, ok := h.lookup(w, r.Context(), r.PathValue("id"))
+	s, ok := h.lookup(w, r, r.PathValue("id"))
 	if !ok {
 		return
 	}
 	sess, _ := h.currentSession(r) // guaranteed by requireSession
-	if !h.ownsOrClaimable(w, s, sess.Email) {
+	if !h.ownsOrClaimable(w, r, s, sess.Email) {
 		return
 	}
-	h.renderSetup(w, s, false)
+	h.renderSetup(w, r, s, false)
 }
 
 func (h *handler) setupPost(w http.ResponseWriter, r *http.Request) {
-	s, ok := h.lookup(w, r.Context(), r.PathValue("id"))
+	s, ok := h.lookup(w, r, r.PathValue("id"))
 	if !ok {
 		return
 	}
 	sess, _ := h.currentSession(r)
-	if !h.ownsOrClaimable(w, s, sess.Email) {
+	if !h.ownsOrClaimable(w, r, s, sess.Email) {
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		h.render(w, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
+		h.render(w, r, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
 		return
 	}
 
@@ -76,7 +75,7 @@ func (h *handler) setupPost(w http.ResponseWriter, r *http.Request) {
 		hash, err := sharing.HashPassword(pw)
 		if err != nil {
 			log.Printf("hash password: %v", err)
-			h.render(w, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save settings."))
+			h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save settings."))
 			return
 		}
 		s.PasswordHash = hash
@@ -85,19 +84,19 @@ func (h *handler) setupPost(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.repo.Update(r.Context(), s); err != nil {
 		log.Printf("update sharing %s: %v", s.ID, err)
-		h.render(w, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save settings."))
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save settings."))
 		return
 	}
-	h.renderSetup(w, s, true)
+	h.renderSetup(w, r, s, true)
 }
 
 // ownsOrClaimable allows access to setup when the share is unclaimed or already
 // owned by the current session's email. A claimed share is private to its owner.
-func (h *handler) ownsOrClaimable(w http.ResponseWriter, s sharing.Sharing, email string) bool {
+func (h *handler) ownsOrClaimable(w http.ResponseWriter, r *http.Request, s sharing.Sharing, email string) bool {
 	if s.OwnerEmail == "" || s.OwnerEmail == email {
 		return true
 	}
-	h.render(w, http.StatusForbidden, "error", errData(http.StatusForbidden, "This share belongs to someone else."))
+	h.render(w, r, http.StatusForbidden, "error", errData(http.StatusForbidden, "This share belongs to someone else."))
 	return false
 }
 
@@ -107,10 +106,10 @@ func (h *handler) shareView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.hasPasswordGrant(r, s) {
-		h.render(w, http.StatusOK, "share_password", map[string]any{"Sharing": s})
+		h.render(w, r, http.StatusOK, "share_password", map[string]any{"Sharing": s})
 		return
 	}
-	h.render(w, http.StatusOK, "share", map[string]any{
+	h.render(w, r, http.StatusOK, "share", map[string]any{
 		"Sharing":     s,
 		"DownloadURL": "/s/" + s.ID + "/download",
 	})
@@ -122,11 +121,11 @@ func (h *handler) sharePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		h.render(w, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
+		h.render(w, r, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
 		return
 	}
 	if s.HasPassword() && !s.CheckPassword(r.FormValue("password")) {
-		h.render(w, http.StatusUnauthorized, "share_password", map[string]any{
+		h.render(w, r, http.StatusUnauthorized, "share_password", map[string]any{
 			"Sharing": s, "Error": "Incorrect password.",
 		})
 		return
@@ -149,12 +148,12 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 
 	rc, err := h.storage.Open(r.Context(), s.FileID, s.FileName)
 	if errors.Is(err, storage.ErrNotFound) {
-		h.render(w, http.StatusNotFound, "error", errData(http.StatusNotFound, "The file is no longer available."))
+		h.render(w, r, http.StatusNotFound, "error", errData(http.StatusNotFound, "The file is no longer available."))
 		return
 	}
 	if err != nil {
 		log.Printf("open file %s: %v", s.FileID, err)
-		h.render(w, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not read the file."))
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not read the file."))
 		return
 	}
 	defer rc.Close()
@@ -170,16 +169,16 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 // allowlisted). Password is enforced separately by the caller. It writes the
 // appropriate response and returns false when access is denied.
 func (h *handler) accessibleShare(w http.ResponseWriter, r *http.Request) (sharing.Sharing, bool) {
-	s, ok := h.lookup(w, r.Context(), r.PathValue("id"))
+	s, ok := h.lookup(w, r, r.PathValue("id"))
 	if !ok {
 		return sharing.Sharing{}, false
 	}
 	if !s.Configured {
-		h.render(w, http.StatusNotFound, "error", errData(http.StatusNotFound, "This share has not been set up yet."))
+		h.render(w, r, http.StatusNotFound, "error", errData(http.StatusNotFound, "This share has not been set up yet."))
 		return sharing.Sharing{}, false
 	}
 	if s.Expired(time.Now()) {
-		h.render(w, http.StatusGone, "error", errData(http.StatusGone, "This share has expired."))
+		h.render(w, r, http.StatusGone, "error", errData(http.StatusGone, "This share has expired."))
 		return sharing.Sharing{}, false
 	}
 	if !s.Public {
@@ -189,7 +188,7 @@ func (h *handler) accessibleShare(w http.ResponseWriter, r *http.Request) (shari
 			return sharing.Sharing{}, false
 		}
 		if s.OwnerEmail != sess.Email && !s.AllowsEmail(sess.Email) {
-			h.render(w, http.StatusForbidden, "error", errData(http.StatusForbidden, "You don't have access to this share."))
+			h.render(w, r, http.StatusForbidden, "error", errData(http.StatusForbidden, "You don't have access to this share."))
 			return sharing.Sharing{}, false
 		}
 	}
@@ -198,26 +197,26 @@ func (h *handler) accessibleShare(w http.ResponseWriter, r *http.Request) (shari
 
 // lookup fetches a sharing by id, rendering a 404 and returning false when it is
 // absent. Other repository errors render a 500.
-func (h *handler) lookup(w http.ResponseWriter, ctx context.Context, id string) (sharing.Sharing, bool) {
-	s, err := h.repo.Get(ctx, id)
+func (h *handler) lookup(w http.ResponseWriter, r *http.Request, id string) (sharing.Sharing, bool) {
+	s, err := h.repo.Get(r.Context(), id)
 	if errors.Is(err, sharing.ErrNotFound) {
-		h.render(w, http.StatusNotFound, "error", errData(http.StatusNotFound, "We couldn't find that share."))
+		h.render(w, r, http.StatusNotFound, "error", errData(http.StatusNotFound, "We couldn't find that share."))
 		return sharing.Sharing{}, false
 	}
 	if err != nil {
 		log.Printf("get sharing %s: %v", id, err)
-		h.render(w, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Something went wrong."))
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Something went wrong."))
 		return sharing.Sharing{}, false
 	}
 	return s, true
 }
 
-func (h *handler) renderSetup(w http.ResponseWriter, s sharing.Sharing, saved bool) {
+func (h *handler) renderSetup(w http.ResponseWriter, r *http.Request, s sharing.Sharing, saved bool) {
 	expires := ""
 	if s.ExpiresAt == nil {
 		expires = "never"
 	}
-	h.render(w, http.StatusOK, "setup", map[string]any{
+	h.render(w, r, http.StatusOK, "setup", map[string]any{
 		"Sharing":  s,
 		"Saved":    saved,
 		"Expires":  expires,
@@ -227,8 +226,12 @@ func (h *handler) renderSetup(w http.ResponseWriter, s sharing.Sharing, saved bo
 }
 
 // render writes a page, buffering first so a template error doesn't emit a
-// half-written response with an already-committed 200 status.
-func (h *handler) render(w http.ResponseWriter, status int, page string, data any) {
+// half-written response with an already-committed 200 status. It injects the
+// current session into data so the base layout can render the user menu.
+func (h *handler) render(w http.ResponseWriter, r *http.Request, status int, page string, data map[string]any) {
+	if sess, ok := h.currentSession(r); ok {
+		data["Session"] = sess
+	}
 	var buf bytes.Buffer
 	if err := h.tpl.render(&buf, page, data); err != nil {
 		log.Printf("render %s: %v", page, err)
