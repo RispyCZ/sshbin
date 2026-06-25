@@ -55,3 +55,52 @@ document.querySelectorAll("[data-copy-btn]").forEach((btn) => {
     }
   });
 });
+
+// OTP digit inputs
+const otpInputs = [...document.querySelectorAll(".otp-input")];
+if (otpInputs.length) {
+  const otpValue = document.getElementById("otp-value");
+  const otpForm = document.getElementById("otp-form");
+  const otpHint = document.getElementById("otp-hint");
+
+  function syncAndMaybeSubmit() {
+    const code = otpInputs.map((i) => i.value).join("");
+    otpValue.value = code;
+    if (code.length === otpInputs.length) {
+      otpHint.textContent = "Verifying…";
+      otpForm.submit();
+    }
+  }
+
+  otpInputs.forEach((input, idx) => {
+    input.addEventListener("input", () => {
+      const digit = input.value.replace(/\D/g, "").slice(-1);
+      input.value = digit;
+      if (digit && idx < otpInputs.length - 1) otpInputs[idx + 1].focus();
+      syncAndMaybeSubmit();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !input.value && idx > 0) {
+        otpInputs[idx - 1].value = "";
+        otpInputs[idx - 1].focus();
+        syncAndMaybeSubmit();
+      }
+    });
+
+    input.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData)
+        .getData("text")
+        .replace(/\D/g, "");
+      text.split("").forEach((char, i) => {
+        if (otpInputs[idx + i]) otpInputs[idx + i].value = char;
+      });
+      const last = Math.min(idx + text.length, otpInputs.length) - 1;
+      otpInputs[last].focus();
+      syncAndMaybeSubmit();
+    });
+  });
+
+  otpInputs[0].focus();
+}

@@ -77,7 +77,7 @@ func (h *handler) loginPost(w http.ResponseWriter, r *http.Request) {
 		h.render(w, r,http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not send a code."))
 		return
 	}
-	h.render(w, r,http.StatusOK, "verify", map[string]any{"Email": email, "Next": next})
+	h.render(w, r,http.StatusOK, "verify", map[string]any{"Email": email, "MaskedEmail": maskEmail(email), "Next": next})
 }
 
 func (h *handler) verifyPost(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +92,7 @@ func (h *handler) verifyPost(w http.ResponseWriter, r *http.Request) {
 	token, sess, err := h.auth.Verify(email, code)
 	if err != nil {
 		h.render(w, r,http.StatusUnauthorized, "verify", map[string]any{
-			"Email": email, "Next": next, "Error": verifyError(err),
+			"Email": email, "MaskedEmail": maskEmail(email), "Next": next, "Error": verifyError(err),
 		})
 		return
 	}
@@ -128,4 +128,15 @@ func safeNext(next string) string {
 		return "/"
 	}
 	return next
+}
+
+func maskEmail(email string) string {
+	at := strings.LastIndex(email, "@")
+	if at <= 0 {
+		return email
+	}
+	local := email[:at]
+	domain := email[at:]
+	mask := strings.Repeat("•", len(local))
+	return mask + domain
 }

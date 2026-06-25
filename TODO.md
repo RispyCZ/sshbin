@@ -1,11 +1,17 @@
-- Use proper VFS to have abstraction above actual storage layer
-- Add SSH auth via keys? passwords?
 - Build docs page
 - Add LiCENCE
-- S3 as backend storage (requires VFS)
-- Support different SFTP clients outside scp, winscp? sftp?
-- Use logger eg, logrus, uber/zap
+
+# Frontend
+- Shares/Uploads overview + CRUD
+- Use native web components in FE (Lit)
 - Add full profile page (delete account + data)
-- Shares overview + CRUD
+
+
+# Backend
+- Auth methods outside OTP code
+- Support different SFTP clients outside scp, winscp? sftp?
+- Add SSH auth via keys? passwords?
+- Add VFS layer to have abstraction above actual storage layer
+- S3 as backend storage (requires VFS)
+- Use logger eg, logrus, uber/zap
 - Providers for sending OTP code
-- Auth methods

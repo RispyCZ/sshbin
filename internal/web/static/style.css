@@ -472,3 +472,60 @@ input[type=checkbox] { accent-color: var(--accent); }
 
   &:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
 }
+
+/* ── OTP verify ──────────────────── */
+.otp-card { text-align: center; }
+
+.otp-title {
+  font-size: .75rem;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin: 0 0 .4rem;
+}
+
+.otp-subtitle {
+  color: var(--muted);
+  font-size: .9rem;
+  margin: 0 0 1.75rem;
+}
+
+.otp-email {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.otp-container {
+  display: flex;
+  gap: .5rem;
+  justify-content: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.otp-container .otp-input {
+  width: 2.75rem;
+  height: 3.25rem;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+
+  &:hover { border-color: var(--green-300); }
+  &:focus { border-bottom-color: var(--accent); box-shadow: none; }
+}
+
+.otp-hint {
+  font-size: .65rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+}
