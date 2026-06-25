@@ -1,4 +1,4 @@
-package sftpd_test
+package sftp_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/rispycz/sshbin/internal/sftpd"
+	"github.com/rispycz/sshbin/internal/sftp"
 )
 
 type mockChannel struct {
@@ -21,7 +21,7 @@ func (m *mockChannel) Stderr() io.ReadWriter        { return &m.stderr }
 
 func TestStderrWriter_RoutesToStderr(t *testing.T) {
 	ch := &mockChannel{}
-	w := sftpd.NewStderrWriter(ch)
+	w := sftp.NewStderrWriter(ch)
 
 	msg := []byte("setup url\n")
 	if _, err := w.Write(msg); err != nil {

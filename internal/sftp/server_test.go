@@ -1,4 +1,4 @@
-package sftpd_test
+package sftp_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/rispycz/sshbin/internal/sharing"
-	"github.com/rispycz/sshbin/internal/sftpd"
+	sftpd "github.com/rispycz/sshbin/internal/sftp"
 	"github.com/rispycz/sshbin/internal/storage"
 )
 

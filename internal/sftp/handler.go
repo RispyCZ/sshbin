@@ -1,4 +1,4 @@
-package sftpd
+package sftp
 
 import (
 	"context"

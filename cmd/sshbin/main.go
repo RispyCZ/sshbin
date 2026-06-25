@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rispycz/sshbin/internal/auth"
-	"github.com/rispycz/sshbin/internal/sftpd"
+	"github.com/rispycz/sshbin/internal/sftp"
 	"github.com/rispycz/sshbin/internal/sqlstore"
 	"github.com/rispycz/sshbin/internal/storage"
 	"github.com/rispycz/sshbin/internal/web"
@@ -46,7 +46,7 @@ func main() {
 	repo := db.Shares()
 	st := &storage.LocalStorage{BaseDir: *storageDir}
 
-	sftpSrv := sftpd.New(sftpd.Config{
+	sftpSrv := sftp.New(sftp.Config{
 		ListenAddr:  *sftpAddr,
 		HostKeyPath: *hostKeyPath,
 		BaseURL:     *baseURL,
