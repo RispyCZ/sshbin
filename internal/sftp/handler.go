@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/google/uuid"
 	"github.com/pkg/sftp"
 
@@ -40,6 +41,7 @@ func (f *uploadFile) WriteAt(p []byte, off int64) (int, error) {
 	// sftp sends sequential chunks; WriteAt with offset is used but we rely on sequential delivery
 	n, err := f.wc.Write(p)
 	if err != nil {
+		log.Error("storage write", "file", f.name, "err", err)
 		f.writeErr = err
 	}
 	return n, err
@@ -47,6 +49,7 @@ func (f *uploadFile) WriteAt(p []byte, off int64) (int, error) {
 
 func (f *uploadFile) Close() error {
 	if err := f.wc.Close(); err != nil {
+		log.Error("storage close", "file", f.name, "err", err)
 		return err
 	}
 	ctx := context.Background()

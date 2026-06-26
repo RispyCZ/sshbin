@@ -1,0 +1,10 @@
+services:
+  s3mock:
+    container_name: sshbin-s3mock
+    image: adobe/s3mock
+    ports:
+      - "9090:9090/tcp"
+      - "9191:9191/tcp"
+    environment:
+      - debug=true
+      - COM_ADOBE_TESTING_S3MOCK_STORE_INITIAL_BUCKETS=sshbin

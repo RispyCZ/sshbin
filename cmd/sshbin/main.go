@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -22,13 +21,9 @@ func main() {
 	webAddr := flag.String("web-listen", ":8080", "web UI listen address")
 	hostKeyPath := flag.String("host-key", "host_key", "path to SSH host key (generated if missing)")
 	baseURL := flag.String("base-url", "http://localhost:8080", "base URL for setup and share links")
-	storageDir := flag.String("storage", "uploads", "directory for uploaded files")
+	storageDSN := flag.String("storage", "local://uploads", "storage backend DSN (local://path or s3://bucket/prefix)")
 	dsn := flag.String("db", "sqlite://sshbin.db", "database DSN (e.g. sqlite://sshbin.db)")
 	flag.Parse()
-
-	if err := os.MkdirAll(*storageDir, 0o750); err != nil {
-		log.Fatal("create storage dir", "err", err)
-	}
 
 	db, err := sqlstore.Open(*dsn)
 	if err != nil {
@@ -41,10 +36,14 @@ func main() {
 		log.Fatal("load grant secret", "err", err)
 	}
 
+	st, err := storage.Open(*storageDSN)
+	if err != nil {
+		log.Fatal("open storage", "err", err)
+	}
+
 	// Shares are persisted and shared by both servers: SFTP creates records,
 	// the web UI reads and updates them.
 	repo := db.Shares()
-	st := &storage.LocalStorage{BaseDir: *storageDir}
 
 	sftpSrv := sftp.New(sftp.Config{
 		ListenAddr:  *sftpAddr,

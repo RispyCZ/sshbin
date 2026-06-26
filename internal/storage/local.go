@@ -12,6 +12,10 @@ type LocalStorage struct {
 	BaseDir string
 }
 
+func NewLocal(dir string) *LocalStorage {
+	return &LocalStorage{BaseDir: dir}
+}
+
 func (s *LocalStorage) Create(ctx context.Context, id string, name string) (io.WriteCloser, error) {
 	dir := filepath.Join(s.BaseDir, id)
 	if err := os.MkdirAll(dir, 0o750); err != nil {
