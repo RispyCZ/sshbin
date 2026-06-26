@@ -90,4 +90,6 @@ type Repository interface {
 	Create(ctx context.Context, s Sharing) error
 	Get(ctx context.Context, id string) (Sharing, error)
 	Update(ctx context.Context, s Sharing) error
+	ListByOwner(ctx context.Context, email string) ([]Sharing, error)
+	Delete(ctx context.Context, id string) error
 }

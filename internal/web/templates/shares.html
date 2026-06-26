@@ -1,0 +1,65 @@
+{{define "title"}}My shares — sshbin{{end}}
+{{define "container-class"}}container container--wide{{end}}
+{{define "content"}}
+<h1>My shares</h1>
+
+{{if not .Items}}
+<div class="card">
+  <div class="empty-state">
+    <p>No shares yet. Upload a file via SFTP to get started.</p>
+  </div>
+</div>
+{{else}}
+<div class="card shares-card">
+  <table class="shares-table">
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Visibility</th>
+        <th>Expires</th>
+        <th>Created</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Items}}
+      <tr>
+        <td>
+          <span class="share-filename">
+            {{if .S.Configured}}<a href="/s/{{.S.ID}}">{{.S.FileName}}</a>{{else}}{{.S.FileName}}{{end}}
+          </span>
+          {{if not .S.Configured}}<span class="badge badge-draft">not set up</span>{{end}}
+        </td>
+        <td>
+          {{if .S.Public}}
+          <span class="badge badge-public">public</span>
+          {{else}}
+          <span class="badge badge-private">private</span>
+          {{end}}
+        </td>
+        <td>
+          {{if .Expired}}
+          <span class="badge badge-expired">expired</span>
+          {{else if .S.ExpiresAt}}
+          {{.S.ExpiresAt.Format "Jan 2, 2006"}}
+          {{else}}
+          <span class="muted">never</span>
+          {{end}}
+        </td>
+        <td class="muted">{{.S.CreatedAt.Format "Jan 2, 2006"}}</td>
+        <td>
+          <div class="row-actions">
+            {{if .S.Configured}}<sb-share-modal share-id="{{.S.ID}}" share-url="{{.ShareURL}}" file-name="{{.S.FileName}}"></sb-share-modal>{{end}}
+            <a class="btn-secondary" href="/setup/{{.S.ID}}">Edit</a>
+            <form method="post" action="/shares/{{.S.ID}}/delete" onsubmit="return confirm('Delete this share? This cannot be undone.')">
+              <button type="submit" class="btn-danger">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+{{end}}

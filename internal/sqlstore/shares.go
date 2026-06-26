@@ -89,6 +89,61 @@ func (r *ShareRepo) Get(ctx context.Context, id string) (sharing.Sharing, error)
 	return s, nil
 }
 
+func (r *ShareRepo) ListByOwner(ctx context.Context, email string) ([]sharing.Sharing, error) {
+	rows, err := r.db.QueryContext(ctx, r.dialect.Rebind(`
+		SELECT id, file_id, file_name, created_at, configured, owner_email, expires_at, password_hash, public
+		FROM shares WHERE owner_email=? ORDER BY created_at DESC`), email)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var shares []sharing.Sharing
+	for rows.Next() {
+		var (
+			s         sharing.Sharing
+			createdAt int64
+			expiresAt sql.NullInt64
+			configured, public int
+		)
+		if err := rows.Scan(&s.ID, &s.FileID, &s.FileName, &createdAt, &configured, &s.OwnerEmail, &expiresAt, &s.PasswordHash, &public); err != nil {
+			return nil, err
+		}
+		s.CreatedAt = time.Unix(createdAt, 0).UTC()
+		s.Configured = configured != 0
+		s.Public = public != 0
+		if expiresAt.Valid {
+			t := time.Unix(expiresAt.Int64, 0).UTC()
+			s.ExpiresAt = &t
+		}
+		shares = append(shares, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return shares, nil
+}
+
+func (r *ShareRepo) Delete(ctx context.Context, id string) error {
+	return r.tx(ctx, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, r.dialect.Rebind(`DELETE FROM share_allowed_emails WHERE share_id=?`), id); err != nil {
+			return err
+		}
+		res, err := tx.ExecContext(ctx, r.dialect.Rebind(`DELETE FROM shares WHERE id=?`), id)
+		if err != nil {
+			return err
+		}
+		n, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return sharing.ErrNotFound
+		}
+		return nil
+	})
+}
+
 func (r *ShareRepo) tx(ctx context.Context, fn func(*sql.Tx) error) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

@@ -40,3 +40,25 @@ func (r *MemoryRepository) Update(ctx context.Context, s Sharing) error {
 	r.records[s.ID] = s
 	return nil
 }
+
+func (r *MemoryRepository) ListByOwner(ctx context.Context, email string) ([]Sharing, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var out []Sharing
+	for _, s := range r.records {
+		if s.OwnerEmail == email {
+			out = append(out, s)
+		}
+	}
+	return out, nil
+}
+
+func (r *MemoryRepository) Delete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.records[id]; !ok {
+		return ErrNotFound
+	}
+	delete(r.records, id)
+	return nil
+}

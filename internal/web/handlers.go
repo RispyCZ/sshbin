@@ -12,6 +12,8 @@ import (
 	"time"
 	"unicode"
 
+	qrcode "github.com/skip2/go-qrcode"
+
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/sharing"
 	"github.com/rispycz/sshbin/internal/storage"
@@ -36,6 +38,64 @@ var expiryPresets = map[string]time.Duration{
 
 func (h *handler) index(w http.ResponseWriter, r *http.Request) {
 	h.render(w, r, http.StatusOK, "index", map[string]any{"Host": h.host})
+}
+
+type shareListItem struct {
+	S        sharing.Sharing
+	Expired  bool
+	ShareURL string
+}
+
+func (h *handler) sharesList(w http.ResponseWriter, r *http.Request) {
+	sess, _ := h.currentSession(r)
+	shares, err := h.repo.ListByOwner(r.Context(), sess.Email)
+	if err != nil {
+		log.Printf("list shares for %s: %v", sess.Email, err)
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not load shares."))
+		return
+	}
+	now := time.Now()
+	items := make([]shareListItem, len(shares))
+	for i, s := range shares {
+		items[i] = shareListItem{S: s, Expired: s.Expired(now), ShareURL: h.baseURL + "/s/" + s.ID}
+	}
+	h.render(w, r, http.StatusOK, "shares", map[string]any{"Items": items})
+}
+
+func (h *handler) shareQR(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if _, err := h.repo.Get(r.Context(), id); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	png, err := qrcode.Encode(h.baseURL+"/s/"+id, qrcode.Medium, 256)
+	if err != nil {
+		log.Printf("qr encode %s: %v", id, err)
+		http.Error(w, "qr error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Write(png)
+}
+
+func (h *handler) deleteShare(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	s, ok := h.lookup(w, r, id)
+	if !ok {
+		return
+	}
+	sess, _ := h.currentSession(r)
+	if s.OwnerEmail != sess.Email {
+		h.render(w, r, http.StatusForbidden, "error", errData(http.StatusForbidden, "This share belongs to someone else."))
+		return
+	}
+	if err := h.repo.Delete(r.Context(), id); err != nil {
+		log.Printf("delete share %s: %v", id, err)
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not delete share."))
+		return
+	}
+	http.Redirect(w, r, "/shares", http.StatusSeeOther)
 }
 
 func (h *handler) setupGet(w http.ResponseWriter, r *http.Request) {

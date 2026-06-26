@@ -23,7 +23,7 @@
       {{end}}
     </div>
   </header>
-  <main class="container">
+  <main class="{{block "container-class" .}}container{{end}}">
     {{block "content" .}}{{end}}
   </main>
   <sb-toast></sb-toast>
@@ -36,6 +36,7 @@
   <script type="module" src="/static/components/sb-share-link.js"></script>
   <script type="module" src="/static/components/sb-user-menu.js"></script>
   <script type="module" src="/static/components/sb-toast.js"></script>
+  <script type="module" src="/static/components/sb-share-modal.js"></script>
 </body>
 </html>
 {{- end}}

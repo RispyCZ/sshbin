@@ -21,7 +21,7 @@ type templates struct {
 
 func parseTemplates() (*templates, error) {
 	t := &templates{pages: make(map[string]*template.Template)}
-	for _, page := range []string{"index", "setup", "share", "share_password", "login", "verify", "error"} {
+	for _, page := range []string{"index", "setup", "share", "share_password", "login", "verify", "error", "shares"} {
 		parsed, err := template.ParseFS(templateFS, "templates/base.html", "templates/"+page+".html")
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", page, err)
