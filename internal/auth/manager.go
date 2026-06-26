@@ -8,8 +8,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
+
+	"github.com/charmbracelet/log"
 	"strings"
 	"sync"
 	"time"
@@ -139,7 +140,7 @@ func (m *Manager) Verify(email, code string) (string, Session, error) {
 func (m *Manager) Session(token string) (Session, bool) {
 	s, ok, err := m.sessions.Get(token)
 	if err != nil {
-		log.Printf("auth: session lookup: %v", err)
+		log.Error("auth: session lookup", "err", err)
 		return Session{}, false
 	}
 	return s, ok
@@ -147,7 +148,7 @@ func (m *Manager) Session(token string) (Session, bool) {
 
 func (m *Manager) Logout(token string) {
 	if err := m.sessions.Delete(token); err != nil {
-		log.Printf("auth: session delete: %v", err)
+		log.Error("auth: session delete", "err", err)
 	}
 }
 

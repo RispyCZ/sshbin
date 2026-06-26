@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/charmbracelet/log"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rispycz/sshbin/internal/auth"
@@ -27,18 +27,18 @@ func main() {
 	flag.Parse()
 
 	if err := os.MkdirAll(*storageDir, 0o750); err != nil {
-		log.Fatalf("create storage dir: %v", err)
+		log.Fatal("create storage dir", "err", err)
 	}
 
 	db, err := sqlstore.Open(*dsn)
 	if err != nil {
-		log.Fatalf("open database: %v", err)
+		log.Fatal("open database", "err", err)
 	}
 	defer db.Close()
 
 	secret, err := db.EnsureSecret()
 	if err != nil {
-		log.Fatalf("load grant secret: %v", err)
+		log.Fatal("load grant secret", "err", err)
 	}
 
 	// Shares are persisted and shared by both servers: SFTP creates records,
@@ -68,8 +68,8 @@ func main() {
 	g.Go(func() error { return sftpSrv.ListenAndServe(ctx) })
 	g.Go(func() error { return webSrv.ListenAndServe(ctx) })
 
-	log.Printf("sshbin: sftp %s, web %s", *sftpAddr, *webAddr)
+	log.Info("sshbin started", "sftp", *sftpAddr, "web", *webAddr)
 	if err := g.Wait(); err != nil {
-		log.Fatalf("server: %v", err)
+		log.Fatal("server", "err", err)
 	}
 }

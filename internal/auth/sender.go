@@ -2,7 +2,8 @@ package auth
 
 import (
 	"context"
-	"log"
+
+	"github.com/charmbracelet/log"
 )
 
 // Sender delivers a one-time code to a destination (an email address for now).
@@ -16,6 +17,6 @@ type Sender interface {
 type LogSender struct{}
 
 func (LogSender) Send(_ context.Context, dest, code string) error {
-	log.Printf("auth: OTP for %s is %s", dest, code)
+	log.Info("auth: OTP", "dest", dest, "code", code)
 	return nil
 }

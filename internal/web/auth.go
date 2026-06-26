@@ -2,8 +2,9 @@ package web
 
 import (
 	"errors"
-	"log"
 	"net/http"
+
+	"github.com/charmbracelet/log"
 	"net/url"
 	"strings"
 	"time"
@@ -73,7 +74,7 @@ func (h *handler) loginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.auth.StartLogin(r.Context(), email); err != nil {
-		log.Printf("start login: %v", err)
+		log.Error("start login", "err", err)
 		h.render(w, r,http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not send a code."))
 		return
 	}

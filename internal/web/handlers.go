@@ -3,8 +3,9 @@ package web
 import (
 	"bytes"
 	"errors"
-	"log"
 	"mime"
+
+	"github.com/charmbracelet/log"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -50,7 +51,7 @@ func (h *handler) sharesList(w http.ResponseWriter, r *http.Request) {
 	sess, _ := h.currentSession(r)
 	shares, err := h.repo.ListByOwner(r.Context(), sess.Email)
 	if err != nil {
-		log.Printf("list shares for %s: %v", sess.Email, err)
+		log.Error("list shares", "email", sess.Email, "err", err)
 		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not load shares."))
 		return
 	}
@@ -70,7 +71,7 @@ func (h *handler) shareQR(w http.ResponseWriter, r *http.Request) {
 	}
 	png, err := qrcode.Encode(h.baseURL+"/s/"+id, qrcode.Medium, 256)
 	if err != nil {
-		log.Printf("qr encode %s: %v", id, err)
+		log.Error("qr encode", "id", id, "err", err)
 		http.Error(w, "qr error", http.StatusInternalServerError)
 		return
 	}
@@ -91,7 +92,7 @@ func (h *handler) deleteShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.repo.Delete(r.Context(), id); err != nil {
-		log.Printf("delete share %s: %v", id, err)
+		log.Error("delete share", "id", id, "err", err)
 		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not delete share."))
 		return
 	}
@@ -134,7 +135,7 @@ func (h *handler) setupPost(w http.ResponseWriter, r *http.Request) {
 	if pw := r.FormValue("password"); pw != "" {
 		hash, err := sharing.HashPassword(pw)
 		if err != nil {
-			log.Printf("hash password: %v", err)
+			log.Error("hash password", "err", err)
 			h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save settings."))
 			return
 		}
@@ -143,7 +144,7 @@ func (h *handler) setupPost(w http.ResponseWriter, r *http.Request) {
 	s.Configured = true
 
 	if err := h.repo.Update(r.Context(), s); err != nil {
-		log.Printf("update sharing %s: %v", s.ID, err)
+		log.Error("update sharing", "id", s.ID, "err", err)
 		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save settings."))
 		return
 	}
@@ -212,7 +213,7 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		log.Printf("open file %s: %v", s.FileID, err)
+		log.Error("open file", "id", s.FileID, "err", err)
 		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not read the file."))
 		return
 	}
@@ -264,7 +265,7 @@ func (h *handler) lookup(w http.ResponseWriter, r *http.Request, id string) (sha
 		return sharing.Sharing{}, false
 	}
 	if err != nil {
-		log.Printf("get sharing %s: %v", id, err)
+		log.Error("get sharing", "id", id, "err", err)
 		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Something went wrong."))
 		return sharing.Sharing{}, false
 	}
@@ -294,7 +295,7 @@ func (h *handler) render(w http.ResponseWriter, r *http.Request, status int, pag
 	}
 	var buf bytes.Buffer
 	if err := h.tpl.render(&buf, page, data); err != nil {
-		log.Printf("render %s: %v", page, err)
+		log.Error("render", "page", page, "err", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}

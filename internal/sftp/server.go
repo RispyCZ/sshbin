@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"time"
+
+	"github.com/charmbracelet/log"
 
 	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
@@ -63,13 +64,13 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 func (s *Server) handleSFTP(sess ssh.Session) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("sftp session panic from %s: %v", sess.RemoteAddr(), r)
+			log.Error("sftp session panic", "addr", sess.RemoteAddr(), "err", r)
 		}
 	}()
 
 	handlers := Handlers(s.storage, s.repo, s.cfg.BaseURL, NewStderrWriter(sess))
 	srv := sftp.NewRequestServer(sess, handlers)
 	if err := srv.Serve(); err != nil && !errors.Is(err, io.EOF) {
-		log.Printf("sftp serve %s: %v", sess.RemoteAddr(), err)
+		log.Error("sftp serve", "addr", sess.RemoteAddr(), "err", err)
 	}
 }
