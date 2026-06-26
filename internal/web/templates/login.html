@@ -3,7 +3,7 @@
 <section class="card narrow">
   <h1>Sign in</h1>
   <p class="lead">We'll email you a one-time code.</p>
-  {{if .Error}}<div class="notice error-notice">{{.Error}}</div>{{end}}
+  {{if .Error}}<sb-notice type="error">{{.Error}}</sb-notice>{{end}}
   <form method="post" action="/login" class="settings-form">
     <input type="hidden" name="next" value="{{.Next}}">
     <label class="field">

@@ -1,27 +1,23 @@
 {{define "title"}}Enter code — sshbin{{end}}
 {{define "content"}}
-<section class="card narrow otp-card">
-  <h1 class="otp-title">OTP Verification</h1>
-  <p class="otp-subtitle">Code has been sent to <span class="otp-email">{{.MaskedEmail}}</span></p>
-  {{if .Error}}<div class="notice error-notice">{{.Error}}</div>{{end}}
+<section class="card narrow center">
+  <h1>Enter your code</h1>
+  <p class="lead">Sent to <span class="otp-email">{{.MaskedEmail}}</span></p>
+  {{if .Error}}<sb-notice type="error">{{.Error}}</sb-notice>{{end}}
   <form method="post" action="/verify" id="otp-form">
     <input type="hidden" name="email" value="{{.Email}}">
     <input type="hidden" name="next" value="{{.Next}}">
     <input type="hidden" name="code" id="otp-value">
-    <div class="otp-container">
-      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="Digit 1">
-      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="Digit 2">
-      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="Digit 3">
-      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="Digit 4">
-      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="Digit 5">
-      <input class="otp-input" type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="Digit 6">
-    </div>
-    <p class="otp-hint" id="otp-hint">Enter code to continue</p>
+    <sb-otp digits="6" form-id="otp-form" value-input-id="otp-value"></sb-otp>
   </form>
-  <form method="post" action="/login" class="resend">
-    <input type="hidden" name="email" value="{{.Email}}">
-    <input type="hidden" name="next" value="{{.Next}}">
-    <button type="submit" class="btn-link">Resend code</button>
-  </form>
+  <div class="auth-actions">
+    <form method="post" action="/login">
+      <input type="hidden" name="email" value="{{.Email}}">
+      <input type="hidden" name="next" value="{{.Next}}">
+      <button type="submit" class="btn-link">Resend code</button>
+    </form>
+    <span class="auth-sep" aria-hidden="true">·</span>
+    <a href="/login" class="btn-link">Back to sign in</a>
+  </div>
 </section>
 {{end}}

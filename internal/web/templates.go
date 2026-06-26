@@ -10,7 +10,7 @@ import (
 //go:embed templates/*.html
 var templateFS embed.FS
 
-//go:embed static/*
+//go:embed static
 var staticFS embed.FS
 
 // templates holds one fully-parsed template set per page, each composed with the

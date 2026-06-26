@@ -5,13 +5,10 @@
   <p class="file-name">{{.Sharing.FileName}}</p>
 
   {{if .Saved}}
-  <div class="notice success">
+  <sb-notice type="success">
     <p>Saved. Share this link:</p>
-    <div class="share-link">
-      <input type="text" readonly value="{{.ShareURL}}" data-copy>
-      <button type="button" class="btn-copy" data-copy-btn>Copy</button>
-    </div>
-  </div>
+    <sb-share-link value="{{.ShareURL}}"></sb-share-link>
+  </sb-notice>
   {{end}}
 
   <form method="post" class="settings-form">

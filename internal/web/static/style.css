@@ -217,8 +217,6 @@ h1 { letter-spacing: -.02em; }
   text-decoration: underline;
 }
 
-.resend { margin-top: 1rem; }
-
 .field {
   display: flex;
   flex-direction: column;
@@ -474,21 +472,22 @@ input[type=checkbox] { accent-color: var(--accent); }
 }
 
 /* ── OTP verify ──────────────────── */
-.otp-card { text-align: center; }
-
-.otp-title {
-  font-size: .75rem;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  font-weight: 600;
-  margin: 0 0 .4rem;
+.card.center .lead {
+  margin-bottom: 1.75rem;
 }
 
-.otp-subtitle {
-  color: var(--muted);
-  font-size: .9rem;
-  margin: 0 0 1.75rem;
+.auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .75rem;
+  margin-top: 1.25rem;
+  font-size: .85rem;
+
+  & form { display: contents; }
 }
+
+.auth-sep { color: var(--muted); }
 
 .otp-email {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
