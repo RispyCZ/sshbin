@@ -97,7 +97,7 @@ func (h *handler) verifyPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.setSessionCookie(w, token, sess.ExpiresAt)
-	http.Redirect(w, r, next, http.StatusSeeOther)
+	http.Redirect(w, r, next+"?flash=signed_in", http.StatusSeeOther)
 }
 
 func (h *handler) logout(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ func (h *handler) logout(w http.ResponseWriter, r *http.Request) {
 		h.auth.Logout(c.Value)
 	}
 	h.clearSessionCookie(w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/?flash=signed_out", http.StatusSeeOther)
 }
 
 func verifyError(err error) string {

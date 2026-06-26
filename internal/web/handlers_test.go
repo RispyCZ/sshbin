@@ -405,8 +405,8 @@ func TestVerifyPost_SetsSessionAndRedirects(t *testing.T) {
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("status = %d, want 303", rec.Code)
 	}
-	if loc := rec.Header().Get("Location"); loc != "/setup/abc" {
-		t.Errorf("Location = %q, want /setup/abc", loc)
+	if loc := rec.Header().Get("Location"); loc != "/setup/abc?flash=signed_in" {
+		t.Errorf("Location = %q, want /setup/abc?flash=signed_in", loc)
 	}
 	if !strings.Contains(rec.Header().Get("Set-Cookie"), sessionCookie) {
 		t.Error("session cookie not set")

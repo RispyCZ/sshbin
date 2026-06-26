@@ -3,7 +3,6 @@
 
 # Frontend
 - Shares/Uploads overview + CRUD
-- Use native web components in FE (Lit)
 - Add full profile page (delete account + data)
 
 
