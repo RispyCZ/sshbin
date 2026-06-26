@@ -2,7 +2,7 @@
 - Add LiCENCE
 
 # Frontend
-- Shares/Uploads overview + CRUD
+- Shares/Uploads overview + CRUD (done)
 - Add full profile page (delete account + data)
 
 
