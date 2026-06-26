@@ -1,3 +1,34 @@
+# Colors
+
+All colors use oklch for perceptually uniform lightness across hues. Two surface scales (light / dark) and five accent palettes.
+
+## Palettes
+
+| Name | Hue | Role |
+|------|-----|------|
+| Grove Green | 145 | Primary, text, surfaces |
+| Neon Teal | 195 | — (reserved) |
+| Electric Lime | 125 | — (reserved) |
+| Solar Amber | 80 | Warning / draft badges |
+| Vivid Coral | 28 | Danger / destructive actions |
+
+## Semantic tokens
+
+| Token | Light | Dark |
+|-------|-------|------|
+| `--bg` | `--surface-base` | `--dark-surface-base` |
+| `--surface` | `--surface-raised` | `--dark-surface-raised` |
+| `--text` | `--green-900` | `--green-50` |
+| `--muted` | `--green-700` | oklch(0.62 0.040 145) |
+| `--border` | `--surface-border` | `--dark-border` |
+| `--accent` | `--green-500` | `--green-400` |
+| `--danger` | `--coral-500` | `--coral-300` |
+
+Theme is detected from `prefers-color-scheme` on first load and persisted in `localStorage` as `"light"` or `"dark"`. The `data-theme` attribute on `<html>` drives the CSS variable overrides.
+
+## Full scale
+
+```css
 :root {
   /* ── Grove Green (Primary) ───────── */
   --green-50:   oklch(0.97 0.030 145);
@@ -15,7 +46,7 @@
   --teal-100:   oklch(0.93 0.060 195);
   --teal-200:   oklch(0.84 0.130 195);
   --teal-300:   oklch(0.74 0.185 195);
-  --teal-400:   oklch(0.64 0.230 195);  /* ← accent */
+  --teal-400:   oklch(0.64 0.230 195);
   --teal-500:   oklch(0.54 0.220 195);
   --teal-700:   oklch(0.38 0.170 195);
   --teal-900:   oklch(0.19 0.080 195);
@@ -23,14 +54,14 @@
   /* ── Electric Lime ───────────────── */
   --lime-200:   oklch(0.92 0.200 125);
   --lime-300:   oklch(0.85 0.250 125);
-  --lime-500:   oklch(0.76 0.270 125);  /* ← accent */
+  --lime-500:   oklch(0.76 0.270 125);
   --lime-700:   oklch(0.58 0.220 125);
   --lime-900:   oklch(0.32 0.130 125);
 
   /* ── Solar Amber ─────────────────── */
   --amber-200:  oklch(0.93 0.120 80);
   --amber-300:  oklch(0.86 0.180 80);
-  --amber-500:  oklch(0.76 0.220 80);   /* ← accent */
+  --amber-500:  oklch(0.76 0.220 80);
   --amber-700:  oklch(0.57 0.200 80);
   --amber-900:  oklch(0.33 0.120 80);
 
@@ -46,7 +77,7 @@
   --surface-raised:   oklch(0.965 0.012 145);
   --surface-overlay:  oklch(0.945 0.018 145);
   --surface-active:   oklch(0.915 0.026 145);
-  --border:           oklch(0.870 0.030 145);
+  --surface-border:   oklch(0.870 0.030 145);
 
   /* ── Dark Surfaces ───────────────── */
   --dark-surface-base:     oklch(0.110 0.025 145);
@@ -55,3 +86,4 @@
   --dark-surface-active:   oklch(0.260 0.038 145);
   --dark-border:           oklch(0.310 0.035 145);
 }
+```
