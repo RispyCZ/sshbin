@@ -6,16 +6,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{block "title" .}}sshbin{{end}}</title>
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/img/favicon-32x32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="/static/img/favicon-16x16.png" sizes="16x16" type="image/png">
+  <link rel="apple-touch-icon" href="/static/img/favicon-180x180.png">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="preconnect" href="https://fonts.bunny.net" crossorigin />
-  <link href="https://fonts.bunny.net/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.bunny.net/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+    rel="stylesheet" />
   <link href="https://fonts.bunny.net/icon?family=Material+Icons" rel="stylesheet" />
   <script>(function () { var t = localStorage.getItem("theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); document.documentElement.setAttribute("data-theme", t) })();</script>
 </head>
 
 <body>
   <header class="site-header">
-    <a class="brand" href="/">sshbin</a>
+    <a class="brand" href="/">
+      <img class="brand-logo brand-logo-light" src="/static/img/sshbin-wordmark-transparent-light.svg" alt="sshbin" height="28">
+      <img class="brand-logo brand-logo-dark" src="/static/img/sshbin-wordmark-transparent-dark.svg" alt="sshbin" height="28">
+    </a>
     <div class="header-end">
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle theme">
         <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -42,7 +50,7 @@
       {{end}}
     </div>
   </header>
-  <main class="{{block "container-class" .}}container{{end}}">
+  <main class="{{block " container-class" .}}container{{end}}">
     {{block "content" .}}{{end}}
   </main>
   <sb-toast></sb-toast>
