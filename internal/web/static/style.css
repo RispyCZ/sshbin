@@ -615,6 +615,12 @@ input[type=checkbox] {
   border-bottom: none;
 }
 
+.shares-table td:last-child,
+.shares-table th:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .shares-table tbody tr:hover {
   background: color-mix(in srgb, var(--text) 3%, transparent);
 }
@@ -622,9 +628,11 @@ input[type=checkbox] {
 .share-filename {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: .85rem;
-  word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   display: block;
-  max-width: 16rem;
+  max-width: 20rem;
 
   & a {
     color: var(--accent);
@@ -637,12 +645,15 @@ input[type=checkbox] {
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
   font-size: .72rem;
   font-weight: 600;
   letter-spacing: .03em;
-  padding: .15rem .5rem;
+  padding: .2rem .55rem;
   border-radius: 999px;
+  white-space: nowrap;
 }
 
 .badge-public {
@@ -675,6 +686,7 @@ input[type=checkbox] {
   display: flex;
   gap: .4rem;
   align-items: center;
+  white-space: nowrap;
 
   & form {
     display: contents;
@@ -886,9 +898,8 @@ dialog.share-modal::backdrop {
 }
 
 .badge .material-icons {
-  font-size: .7rem;
-  vertical-align: middle;
-  margin-right: .2rem;
+  font-size: 13px !important;
+  line-height: 1;
 }
 
 .dropdown-item .material-icons {
