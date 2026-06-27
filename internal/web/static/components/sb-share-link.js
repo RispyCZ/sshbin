@@ -30,7 +30,7 @@ class SbShareLink extends LitElement {
       <div class="share-link">
         <input type="text" readonly .value=${this.value ?? ''}>
         <button type="button" class="btn-copy" @click=${this._handleCopy}>
-          ${this._copied ? 'Copied' : 'Copy'}
+          <span class="material-icons">${this._copied ? 'check' : 'content_copy'}</span>${this._copied ? 'Copied' : 'Copy'}
         </button>
       </div>
     `;

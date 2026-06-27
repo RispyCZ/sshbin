@@ -1,0 +1,14 @@
+<svg width="180" height="36" viewBox="0 0 180 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0,2) scale(0.444)">
+    <rect width="72" height="72" rx="17" fill="oklch(0.110 0.025 145)"></rect>
+  <circle cx="27" cy="29" r="11" stroke="oklch(0.640 0.230 195)" stroke-width="5" fill="none"></circle>
+  <circle cx="27" cy="29" r="4" fill="oklch(0.640 0.230 195)"></circle>
+  <line x1="34.8" y1="35.8" x2="54" y2="55" stroke="oklch(0.640 0.230 195)" stroke-width="5" stroke-linecap="round"></line>
+  <line x1="46" y1="47" x2="46" y2="53.5" stroke="oklch(0.590 0.260 145)" stroke-width="4" stroke-linecap="round"></line>
+  <line x1="52" y1="53" x2="52" y2="59.5" stroke="oklch(0.590 0.260 145)" stroke-width="4" stroke-linecap="round"></line>
+  </g>
+  <text x="38" y="25" font-family="&#39;Space Mono&#39;, monospace" font-size="22" font-weight="700" fill="oklch(0.620 0.190 80)">[</text>
+  <text x="50" y="25" font-family="&#39;Space Mono&#39;, monospace" font-size="22" font-weight="700" fill="oklch(0.490 0.230 145)">ssh</text>
+  <text x="94" y="25" font-family="&#39;Space Mono&#39;, monospace" font-size="22" font-weight="700" fill="oklch(0.620 0.190 80)">]</text>
+  <text x="104" y="25" font-family="&#39;Space Mono&#39;, monospace" font-size="22" font-weight="700" fill="oklch(0.140 0.030 145)">bin</text>
+</svg>

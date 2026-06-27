@@ -47,11 +47,21 @@ class SbToast extends LitElement {
       opacity: .55;
       cursor: pointer;
       padding: 0;
-      font-size: 1.1rem;
       line-height: 1;
       flex-shrink: 0;
+      display: grid;
+      place-items: center;
     }
     .close:hover { opacity: 1; }
+    .material-icons {
+      font-family: 'Material Icons';
+      font-size: 18px;
+      font-weight: normal;
+      font-style: normal;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
   `;
 
   constructor() {
@@ -90,7 +100,7 @@ class SbToast extends LitElement {
     return html`
       <div class="toast" role="status" aria-live="polite">
         <span>${this._message}</span>
-        <button class="close" @click=${this._dismiss} aria-label="Dismiss">&#x2715;</button>
+        <button class="close" @click=${this._dismiss} aria-label="Dismiss"><span class="material-icons">close</span></button>
       </div>
     `;
   }

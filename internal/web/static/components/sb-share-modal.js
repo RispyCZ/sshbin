@@ -43,16 +43,14 @@ class SbShareModal extends LitElement {
 
   render() {
     return html`
-      <button type="button" class="btn-secondary" @click=${this._show}>Share</button>
+      <button type="button" class="btn-secondary" @click=${this._show}><span class="material-icons">share</span>Share</button>
       ${this._visible ? html`
         <dialog class="share-modal" @close=${() => { this._visible = false; }} @click=${this._backdropClick}>
           <div class="share-modal-inner">
             <div class="share-modal-header">
               <span class="share-modal-filename">${this.fileName}</span>
               <button type="button" class="modal-close-btn" aria-label="Close" @click=${this._close}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                  <line x1="1" y1="1" x2="11" y2="11"/><line x1="11" y1="1" x2="1" y2="11"/>
-                </svg>
+                <span class="material-icons" aria-hidden="true">close</span>
               </button>
             </div>
             <div class="share-modal-body">
@@ -60,7 +58,7 @@ class SbShareModal extends LitElement {
               <div class="share-link">
                 <input class="modal-url-input" type="text" readonly .value=${this.shareUrl ?? ''}>
                 <button type="button" class="btn-copy" @click=${this._copy}>
-                  ${this._copied ? 'Copied' : 'Copy'}
+                  <span class="material-icons">${this._copied ? 'check' : 'content_copy'}</span>${this._copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
             </div>

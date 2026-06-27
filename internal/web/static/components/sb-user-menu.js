@@ -40,16 +40,14 @@ class SbUserMenu extends LitElement {
           @click=${this._toggle}>
           <span class="user-avatar">${this.email?.[0] ?? ''}</span>
           <span class="user-email">${this.email}</span>
-          <svg class="chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-            <path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <span class="material-icons chevron" aria-hidden="true">expand_more</span>
         </button>
         <div class="user-dropdown" ?hidden=${!this._open} @click=${e => e.stopPropagation()}>
           <span class="dropdown-email">${this.email}</span>
-          <a class="dropdown-item" href="/shares">My shares</a>
-          <a class="dropdown-item" href="/profile">Profile</a>
+          <a class="dropdown-item" href="/shares"><span class="material-icons">folder</span>My shares</a>
+          <a class="dropdown-item" href="/profile"><span class="material-icons">person</span>Profile</a>
           <form method="post" action="/logout">
-            <button type="submit" class="dropdown-item">Sign out</button>
+            <button type="submit" class="dropdown-item btn-danger"><span class="material-icons">logout</span>Sign out</button>
           </form>
         </div>
       </div>

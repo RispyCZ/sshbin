@@ -28,18 +28,18 @@
           <span class="share-filename">
             {{if .S.Configured}}<a href="/s/{{.S.ID}}">{{.S.FileName}}</a>{{else}}{{.S.FileName}}{{end}}
           </span>
-          {{if not .S.Configured}}<span class="badge badge-draft">not set up</span>{{end}}
+          {{if not .S.Configured}}<span class="badge badge-draft"><span class="material-icons">info</span>not set up</span>{{end}}
         </td>
         <td>
           {{if .S.Public}}
-          <span class="badge badge-public">public</span>
+          <span class="badge badge-public"><span class="material-icons">public</span>public</span>
           {{else}}
-          <span class="badge badge-private">private</span>
+          <span class="badge badge-private"><span class="material-icons">lock</span>private</span>
           {{end}}
         </td>
         <td>
           {{if .Expired}}
-          <span class="badge badge-expired">expired</span>
+          <span class="badge badge-expired"><span class="material-icons">schedule</span>expired</span>
           {{else if .S.ExpiresAt}}
           {{.S.ExpiresAt.Format "Jan 2, 2006"}}
           {{else}}
@@ -50,9 +50,9 @@
         <td>
           <div class="row-actions">
             {{if .S.Configured}}<sb-share-modal share-id="{{.S.ID}}" share-url="{{.ShareURL}}" file-name="{{.S.FileName}}"></sb-share-modal>{{end}}
-            <a class="btn-secondary" href="/setup/{{.S.ID}}">Edit</a>
+            <a class="btn-secondary" href="/setup/{{.S.ID}}"><span class="material-icons">edit</span>Edit</a>
             <form method="post" action="/shares/{{.S.ID}}/delete" onsubmit="return confirm('Delete this share? This cannot be undone.')">
-              <button type="submit" class="btn-danger">Delete</button>
+              <button type="submit" class="btn-danger"><span class="material-icons">delete</span>Delete</button>
             </form>
           </div>
         </td>

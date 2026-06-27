@@ -14,10 +14,10 @@
     <form method="post" action="/login">
       <input type="hidden" name="email" value="{{.Email}}">
       <input type="hidden" name="next" value="{{.Next}}">
-      <button type="submit" class="btn-link">Resend code</button>
+      <button type="submit" class="btn-link"><span class="material-icons">refresh</span>Resend code</button>
     </form>
     <span class="auth-sep" aria-hidden="true">·</span>
-    <a href="/login" class="btn-link">Back to sign in</a>
+    <a href="/login" class="btn-link"><span class="material-icons">arrow_back</span>Back to sign in</a>
   </div>
 </section>
 {{end}}
