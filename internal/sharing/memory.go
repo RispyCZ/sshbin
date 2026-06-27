@@ -62,3 +62,14 @@ func (r *MemoryRepository) Delete(ctx context.Context, id string) error {
 	delete(r.records, id)
 	return nil
 }
+
+func (r *MemoryRepository) DeleteByOwner(ctx context.Context, email string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, s := range r.records {
+		if s.OwnerEmail == email {
+			delete(r.records, id)
+		}
+	}
+	return nil
+}

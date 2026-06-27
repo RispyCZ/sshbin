@@ -18,12 +18,14 @@ import (
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/sharing"
 	"github.com/rispycz/sshbin/internal/storage"
+	"github.com/rispycz/sshbin/internal/userprefs"
 )
 
 type handler struct {
 	repo          sharing.Repository
 	storage       storage.Storage
 	auth          *auth.Manager
+	prefs         userprefs.Repository
 	baseURL       string
 	host          string
 	secureCookies bool
@@ -107,6 +109,11 @@ func (h *handler) setupGet(w http.ResponseWriter, r *http.Request) {
 	sess, _ := h.currentSession(r) // guaranteed by requireSession
 	if !h.ownsOrClaimable(w, r, s, sess.Email) {
 		return
+	}
+	if !s.Configured {
+		if prefs, err := h.prefs.Get(r.Context(), sess.Email); err == nil {
+			s.Public = prefs.DefaultPublic
+		}
 	}
 	h.renderSetup(w, r, s, false)
 }
@@ -306,6 +313,53 @@ func (h *handler) render(w http.ResponseWriter, r *http.Request, status int, pag
 
 func errData(status int, msg string) map[string]any {
 	return map[string]any{"Status": status, "Message": msg}
+}
+
+func (h *handler) profileGet(w http.ResponseWriter, r *http.Request) {
+	sess, _ := h.currentSession(r)
+	prefs, err := h.prefs.Get(r.Context(), sess.Email)
+	if err != nil {
+		log.Error("get user prefs", "err", err)
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not load preferences."))
+		return
+	}
+	h.render(w, r, http.StatusOK, "profile", map[string]any{"Prefs": prefs})
+}
+
+func (h *handler) profilePost(w http.ResponseWriter, r *http.Request) {
+	sess, _ := h.currentSession(r)
+	if err := r.ParseForm(); err != nil {
+		h.render(w, r, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
+		return
+	}
+	prefs := userprefs.UserPrefs{
+		Email:         sess.Email,
+		DefaultPublic: r.FormValue("default_visibility") == "public",
+	}
+	if err := h.prefs.Upsert(r.Context(), prefs); err != nil {
+		log.Error("upsert user prefs", "err", err)
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save preferences."))
+		return
+	}
+	http.Redirect(w, r, "/profile?flash=saved", http.StatusSeeOther)
+}
+
+func (h *handler) profileDelete(w http.ResponseWriter, r *http.Request) {
+	sess, _ := h.currentSession(r)
+	email := sess.Email
+	if err := h.repo.DeleteByOwner(r.Context(), email); err != nil {
+		log.Error("delete shares by owner", "email", email, "err", err)
+		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not delete data."))
+		return
+	}
+	if err := h.prefs.Delete(r.Context(), email); err != nil {
+		log.Error("delete user prefs", "email", email, "err", err)
+	}
+	if err := h.auth.DeleteSessionsByEmail(email); err != nil {
+		log.Error("delete sessions", "email", email, "err", err)
+	}
+	h.clearSessionCookie(w)
+	http.Redirect(w, r, "/?flash=deleted", http.StatusSeeOther)
 }
 
 // contentDisposition builds a safe attachment header, dropping path components

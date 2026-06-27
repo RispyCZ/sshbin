@@ -58,7 +58,7 @@ func main() {
 		ListenAddr: *webAddr,
 		BaseURL:    *baseURL,
 		Secret:     secret,
-	}, repo, st, authMgr)
+	}, repo, st, authMgr, db.UserPrefs())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

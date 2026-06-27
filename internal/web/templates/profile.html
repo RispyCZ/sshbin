@@ -1,0 +1,27 @@
+{{define "title"}}Profile — sshbin{{end}}
+{{define "content"}}
+<section class="card narrow">
+  <h1>Profile</h1>
+  <p class="muted">{{.Session.Email}}</p>
+
+  <form method="post" action="/profile" class="settings-form">
+    <fieldset>
+      <legend>Share defaults</legend>
+      <label><input type="radio" name="default_visibility" value="private" {{if not .Prefs.DefaultPublic}}checked{{end}}> Private — only people I list</label>
+      <label><input type="radio" name="default_visibility" value="public" {{if .Prefs.DefaultPublic}}checked{{end}}> Public — anyone with the link</label>
+    </fieldset>
+
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Save</button>
+    </div>
+  </form>
+</section>
+
+<section class="card narrow">
+  <h2>Danger zone</h2>
+  <p>Delete all your shares and sign out from all devices. This cannot be undone.</p>
+  <form method="post" action="/profile/delete" onsubmit="return confirm('Delete all your data? This cannot be undone.')">
+    <button type="submit" class="btn-danger">Delete all my data</button>
+  </form>
+</section>
+{{end}}

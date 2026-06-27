@@ -12,6 +12,7 @@ import (
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/sharing"
 	"github.com/rispycz/sshbin/internal/storage"
+	"github.com/rispycz/sshbin/internal/userprefs"
 )
 
 type testSender struct{ code string }
@@ -32,6 +33,7 @@ func newTestHandler(t *testing.T, repo sharing.Repository) (*handler, *testSende
 		repo:    repo,
 		storage: &storage.LocalStorage{BaseDir: t.TempDir()},
 		auth:    auth.NewManager(sender, auth.NewMemorySessionStore(), auth.Options{}),
+		prefs:   userprefs.NewMemoryRepository(),
 		baseURL: "http://example.com",
 		host:    "example.com",
 		secret:  []byte("test-secret-32-bytes-padding-xxx"),

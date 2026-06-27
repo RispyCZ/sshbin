@@ -152,6 +152,10 @@ func (m *Manager) Logout(token string) {
 	}
 }
 
+func (m *Manager) DeleteSessionsByEmail(email string) error {
+	return m.sessions.DeleteByEmail(email)
+}
+
 func generateCode() (string, error) {
 	n, err := rand.Int(rand.Reader, big.NewInt(1_000_000))
 	if err != nil {

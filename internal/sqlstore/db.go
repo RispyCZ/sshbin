@@ -58,3 +58,6 @@ func (s *Store) Shares() *ShareRepo { return &ShareRepo{db: s.db, dialect: s.dia
 
 // Sessions returns an auth.SessionStore backed by this store.
 func (s *Store) Sessions() *SessionStore { return &SessionStore{db: s.db, dialect: s.dialect} }
+
+// UserPrefs returns a userprefs.Repository backed by this store.
+func (s *Store) UserPrefs() *UserPrefsRepo { return &UserPrefsRepo{db: s.db, dialect: s.dialect} }

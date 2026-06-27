@@ -46,3 +46,8 @@ func (s *SessionStore) Delete(token string) error {
 	_, err := s.db.Exec(s.dialect.Rebind(`DELETE FROM sessions WHERE token=?`), token)
 	return err
 }
+
+func (s *SessionStore) DeleteByEmail(email string) error {
+	_, err := s.db.Exec(s.dialect.Rebind(`DELETE FROM sessions WHERE email=?`), email)
+	return err
+}

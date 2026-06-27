@@ -47,6 +47,7 @@ class SbUserMenu extends LitElement {
         <div class="user-dropdown" ?hidden=${!this._open} @click=${e => e.stopPropagation()}>
           <span class="dropdown-email">${this.email}</span>
           <a class="dropdown-item" href="/shares">My shares</a>
+          <a class="dropdown-item" href="/profile">Profile</a>
           <form method="post" action="/logout">
             <button type="submit" class="dropdown-item">Sign out</button>
           </form>

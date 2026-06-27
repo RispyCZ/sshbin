@@ -12,6 +12,7 @@ type SessionStore interface {
 	// unknown; expired sessions are treated as unknown and removed.
 	Get(token string) (Session, bool, error)
 	Delete(token string) error
+	DeleteByEmail(email string) error
 }
 
 // MemorySessionStore is the default in-process SessionStore.
@@ -49,6 +50,17 @@ func (m *MemorySessionStore) Get(token string) (Session, bool, error) {
 func (m *MemorySessionStore) Delete(token string) error {
 	m.mu.Lock()
 	delete(m.sessions, token)
+	m.mu.Unlock()
+	return nil
+}
+
+func (m *MemorySessionStore) DeleteByEmail(email string) error {
+	m.mu.Lock()
+	for token, s := range m.sessions {
+		if s.Email == email {
+			delete(m.sessions, token)
+		}
+	}
 	m.mu.Unlock()
 	return nil
 }

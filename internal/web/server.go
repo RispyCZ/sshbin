@@ -13,6 +13,7 @@ import (
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/sharing"
 	"github.com/rispycz/sshbin/internal/storage"
+	"github.com/rispycz/sshbin/internal/userprefs"
 )
 
 const shutdownGrace = 10 * time.Second
@@ -31,10 +32,11 @@ type Server struct {
 	repo    sharing.Repository
 	storage storage.Storage
 	auth    *auth.Manager
+	prefs   userprefs.Repository
 }
 
-func New(cfg Config, repo sharing.Repository, st storage.Storage, authMgr *auth.Manager) *Server {
-	return &Server{cfg: cfg, repo: repo, storage: st, auth: authMgr}
+func New(cfg Config, repo sharing.Repository, st storage.Storage, authMgr *auth.Manager, prefs userprefs.Repository) *Server {
+	return &Server{cfg: cfg, repo: repo, storage: st, auth: authMgr, prefs: prefs}
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
@@ -55,6 +57,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		repo:          s.repo,
 		storage:       s.storage,
 		auth:          s.auth,
+		prefs:         s.prefs,
 		baseURL:       s.cfg.BaseURL,
 		host:          hostFromURL(s.cfg.BaseURL),
 		secureCookies: strings.HasPrefix(s.cfg.BaseURL, "https://"),
@@ -73,6 +76,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.HandleFunc("POST /shares/{id}/delete", h.requireSession(h.deleteShare))
 	mux.HandleFunc("GET /setup/{id}", h.requireSession(h.setupGet))
 	mux.HandleFunc("POST /setup/{id}", h.requireSession(h.setupPost))
+	mux.HandleFunc("GET /profile", h.requireSession(h.profileGet))
+	mux.HandleFunc("POST /profile", h.requireSession(h.profilePost))
+	mux.HandleFunc("POST /profile/delete", h.requireSession(h.profileDelete))
 	mux.HandleFunc("GET /s/{id}", h.shareView)
 	mux.HandleFunc("POST /s/{id}", h.sharePassword)
 	mux.HandleFunc("GET /s/{id}/download", h.download)

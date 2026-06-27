@@ -3,6 +3,8 @@ import { LitElement, html, css } from '/static/lit.min.js';
 const MESSAGES = {
   signed_in:  'Signed in successfully',
   signed_out: 'Signed out',
+  saved:      'Settings saved.',
+  deleted:    'Your data has been deleted.',
 };
 
 class SbToast extends LitElement {

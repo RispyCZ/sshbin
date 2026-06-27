@@ -144,6 +144,35 @@ func (r *ShareRepo) Delete(ctx context.Context, id string) error {
 	})
 }
 
+func (r *ShareRepo) DeleteByOwner(ctx context.Context, email string) error {
+	return r.tx(ctx, func(tx *sql.Tx) error {
+		rows, err := tx.QueryContext(ctx, r.dialect.Rebind(`SELECT id FROM shares WHERE owner_email=?`), email)
+		if err != nil {
+			return err
+		}
+		var ids []string
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return err
+			}
+			ids = append(ids, id)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		for _, id := range ids {
+			if _, err := tx.ExecContext(ctx, r.dialect.Rebind(`DELETE FROM share_allowed_emails WHERE share_id=?`), id); err != nil {
+				return err
+			}
+		}
+		_, err = tx.ExecContext(ctx, r.dialect.Rebind(`DELETE FROM shares WHERE owner_email=?`), email)
+		return err
+	})
+}
+
 func (r *ShareRepo) tx(ctx context.Context, fn func(*sql.Tx) error) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
