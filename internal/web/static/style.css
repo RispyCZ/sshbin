@@ -797,6 +797,12 @@ dialog.share-modal::backdrop {
   color: var(--muted);
   transition: background .15s, color .15s;
 
+  & .modal-close-icon {
+    width: .9rem;
+    height: .9rem;
+    display: block;
+  }
+
   &:hover {
     background: color-mix(in srgb, var(--text) 8%, transparent);
     color: var(--text);
@@ -816,6 +822,26 @@ dialog.share-modal::backdrop {
   display: block;
   width: 200px;
   height: 200px;
+}
+
+/* ── Generic modal ───────────────── */
+.sb-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem 1.25rem;
+}
+
+.sb-modal-message {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.sb-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .6rem;
 }
 
 /* ── OTP verify ──────────────────── */

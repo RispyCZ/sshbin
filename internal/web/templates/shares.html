@@ -51,9 +51,14 @@
           <div class="row-actions">
             {{if .S.Configured}}<sb-share-modal share-id="{{.S.ID}}" share-url="{{.ShareURL}}" file-name="{{.S.FileName}}"></sb-share-modal>{{end}}
             <a class="btn-secondary" href="/setup/{{.S.ID}}"><span class="material-icons">edit</span>Edit</a>
-            <form method="post" action="/shares/{{.S.ID}}/delete" onsubmit="return confirm('Delete this share? This cannot be undone.')">
-              <button type="submit" class="btn-danger"><span class="material-icons">delete</span>Delete</button>
-            </form>
+            <sb-modal
+              heading="Delete share"
+              message="Delete {{.S.FileName}}? This cannot be undone."
+              form-action="/shares/{{.S.ID}}/delete"
+              trigger-label="Delete"
+              trigger-icon="delete"
+              confirm-label="Delete"
+              danger></sb-modal>
           </div>
         </td>
       </tr>

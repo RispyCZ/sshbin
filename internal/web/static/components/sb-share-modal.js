@@ -1,30 +1,18 @@
-import { LitElement, html } from '/static/lit.min.js';
+import { html } from '/static/lit.min.js';
+import { SbModal } from '/static/components/sb-modal.js';
 
-class SbShareModal extends LitElement {
+class SbShareModal extends SbModal {
   static properties = {
+    ...SbModal.properties,
     shareId:  { type: String, attribute: 'share-id' },
     shareUrl: { type: String, attribute: 'share-url' },
     fileName: { type: String, attribute: 'file-name' },
-    _visible: { state: true },
     _copied:  { state: true },
   };
 
-  createRenderRoot() { return this; }
-
   constructor() {
     super();
-    this._visible = false;
-    this._copied  = false;
-  }
-
-  _show() {
-    this._visible = true;
-    this.updateComplete.then(() => this.querySelector('dialog')?.showModal());
-  }
-
-  _close() {
-    this.querySelector('dialog')?.close();
-    this._visible = false;
+    this._copied = false;
   }
 
   async _copy() {
@@ -37,31 +25,39 @@ class SbShareModal extends LitElement {
     }
   }
 
-  _backdropClick(e) {
-    if (e.target.tagName === 'DIALOG') this._close();
+  renderTrigger() {
+    return html`
+      <button type="button" class="btn-secondary" @click=${this._show}>
+        <span class="material-icons">share</span>Share
+      </button>
+    `;
+  }
+
+  renderBody() {
+    return html`
+      <div class="share-modal-body">
+        <img class="share-qr-img" src="/shares/${this.shareId}/qr" alt="QR code" width="200" height="200">
+        <div class="share-link">
+          <input class="modal-url-input" type="text" readonly .value=${this.shareUrl ?? ''}>
+          <button type="button" class="btn-copy" @click=${this._copy}>
+            <span class="material-icons">${this._copied ? 'check' : 'content_copy'}</span>${this._copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+      </div>
+    `;
   }
 
   render() {
     return html`
-      <button type="button" class="btn-secondary" @click=${this._show}><span class="material-icons">share</span>Share</button>
+      ${this.renderTrigger()}
       ${this._visible ? html`
         <dialog class="share-modal" @close=${() => { this._visible = false; }} @click=${this._backdropClick}>
           <div class="share-modal-inner">
             <div class="share-modal-header">
               <span class="share-modal-filename">${this.fileName}</span>
-              <button type="button" class="modal-close-btn" aria-label="Close" @click=${this._close}>
-                <span class="material-icons" aria-hidden="true">close</span>
-              </button>
+              ${this.renderClose()}
             </div>
-            <div class="share-modal-body">
-              <img class="share-qr-img" src="/shares/${this.shareId}/qr" alt="QR code" width="200" height="200">
-              <div class="share-link">
-                <input class="modal-url-input" type="text" readonly .value=${this.shareUrl ?? ''}>
-                <button type="button" class="btn-copy" @click=${this._copy}>
-                  <span class="material-icons">${this._copied ? 'check' : 'content_copy'}</span>${this._copied ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
+            ${this.renderBody()}
           </div>
         </dialog>
       ` : ''}
