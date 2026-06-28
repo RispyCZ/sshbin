@@ -147,6 +147,64 @@ func TestSetupPost_PersistsAndClaims(t *testing.T) {
 	}
 }
 
+func TestSetupPost_FromShares_Redirects(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", CreatedAt: time.Now()})
+	h, sender := newTestHandler(t, repo)
+
+	form := url.Values{
+		"expires":    {"never"},
+		"visibility": {"public"},
+		"from":       {"shares"},
+	}
+	req := httptest.NewRequest("POST", "/setup/abc", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(login(t, h, sender, "owner@example.com"))
+	req.SetPathValue("id", "abc")
+	rec := httptest.NewRecorder()
+
+	h.setupPost(rec, req)
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want 303", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/shares" {
+		t.Errorf("Location = %q, want /shares", loc)
+	}
+
+	got, _ := repo.Get(context.Background(), "abc")
+	if !got.Configured || !got.Public || got.ExpiresAt != nil {
+		t.Errorf("expected configured public never-expiring share, got %+v", got)
+	}
+}
+
+func TestSharesList_IncludesEditData(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	repo.Create(context.Background(), sharing.Sharing{
+		ID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com",
+		Configured: true, Public: true, CreatedAt: time.Now(),
+	})
+	h, sender := newTestHandler(t, repo)
+
+	req := httptest.NewRequest("GET", "/shares", nil)
+	req.AddCookie(login(t, h, sender, "owner@example.com"))
+	rec := httptest.NewRecorder()
+
+	h.sharesList(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "<sb-setup-modal") {
+		t.Error("response missing sb-setup-modal")
+	}
+	if !strings.Contains(body, `expires="never"`) {
+		t.Error("response missing expires bucket")
+	}
+	if !strings.Contains(body, "configured") {
+		t.Error("response missing configured flag")
+	}
+}
+
 func TestSetup_ForbiddenForNonOwner(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com", Configured: true})

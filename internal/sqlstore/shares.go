@@ -121,6 +121,13 @@ func (r *ShareRepo) ListByOwner(ctx context.Context, email string) ([]sharing.Sh
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	for i := range shares {
+		emails, err := loadEmails(ctx, r.db, r.dialect, shares[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		shares[i].AllowedEmails = emails
+	}
 	return shares, nil
 }
 

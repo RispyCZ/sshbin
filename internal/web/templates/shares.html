@@ -50,7 +50,12 @@
         <td>
           <div class="row-actions">
             {{if .S.Configured}}<sb-share-modal share-id="{{.S.ID}}" share-url="{{.ShareURL}}" file-name="{{.S.FileName}}"></sb-share-modal>{{end}}
-            <a class="btn-secondary" href="/setup/{{.S.ID}}"><span class="material-icons">edit</span>Edit</a>
+            <sb-setup-modal
+              share-id="{{.S.ID}}" file-name="{{.S.FileName}}"
+              expires="{{.Expires}}" emails="{{.Emails}}"
+              {{if .S.Public}}is-public{{end}}
+              {{if .S.HasPassword}}has-password{{end}}
+              {{if .S.Configured}}configured{{end}}></sb-setup-modal>
             <sb-modal
               heading="Delete share"
               message="Delete {{.S.FileName}}? This cannot be undone."

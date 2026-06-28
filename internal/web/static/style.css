@@ -244,7 +244,7 @@ h1 {
   }
 }
 
-[data-private-only][hidden] {
+.field[hidden] {
   display: none;
 }
 

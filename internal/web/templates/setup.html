@@ -11,37 +11,11 @@
   </sb-notice>
   {{end}}
 
-  <form method="post" class="settings-form">
-    <fieldset>
-      <legend>Expiry</legend>
-      <label><input type="radio" name="expires" value="1h" {{if eq .Expires "1h"}}checked{{end}}> 1 hour</label>
-      <label><input type="radio" name="expires" value="24h" {{if eq .Expires "24h"}}checked{{end}}> 24 hours</label>
-      <label><input type="radio" name="expires" value="168h" {{if eq .Expires "168h"}}checked{{end}}> 7 days</label>
-      <label><input type="radio" name="expires" value="never" {{if eq .Expires "never"}}checked{{end}}> Never</label>
-    </fieldset>
-
-    <fieldset>
-      <legend>Visibility</legend>
-      <label><input type="radio" name="visibility" value="public" {{if .Sharing.Public}}checked{{end}}> Public — anyone with the link</label>
-      <label><input type="radio" name="visibility" value="private" {{if not .Sharing.Public}}checked{{end}}> Private — only people I list</label>
-      <label class="field" data-private-only>
-        <span>Allowed emails (one per line)</span>
-        <textarea name="emails" rows="3" placeholder="alice@example.com">{{.Emails}}</textarea>
-      </label>
-    </fieldset>
-
-    <fieldset>
-      <legend>Password</legend>
-      <label class="field">
-        <span>Extra password (optional)</span>
-        <input type="password" name="password" autocomplete="new-password" placeholder="{{if .Sharing.HasPassword}}leave blank to keep current{{else}}no password{{end}}">
-      </label>
-    </fieldset>
-
-    <div class="form-actions">
-      <button type="submit" class="btn-primary"><span class="material-icons">save</span>Save settings</button>
-      <a class="btn-secondary" href="/shares"><span class="material-icons">arrow_back</span>Back to my shares</a>
-    </div>
-  </form>
+  <sb-setup-modal inline
+    share-id="{{.Sharing.ID}}" file-name="{{.Sharing.FileName}}"
+    expires="{{.Expires}}" emails="{{.Emails}}"
+    {{if .Sharing.Public}}is-public{{end}}
+    {{if .Sharing.HasPassword}}has-password{{end}}
+    {{if .Sharing.Configured}}configured{{end}}></sb-setup-modal>
 </section>
 {{end}}

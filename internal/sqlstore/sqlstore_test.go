@@ -82,6 +82,29 @@ func TestShares_UpdateReplacesEmails(t *testing.T) {
 	}
 }
 
+func TestShares_ListByOwner_LoadsEmails(t *testing.T) {
+	st := openTemp(t)
+	repo := st.Shares()
+	ctx := context.Background()
+
+	repo.Create(ctx, sharing.Sharing{
+		ID: "abc", FileName: "f.txt", CreatedAt: time.Now(),
+		OwnerEmail: "owner@example.com", Configured: true,
+		AllowedEmails: []string{"alice@example.com", "bob@example.com"},
+	})
+
+	list, err := repo.ListByOwner(ctx, "owner@example.com")
+	if err != nil {
+		t.Fatalf("ListByOwner: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("got %d shares, want 1", len(list))
+	}
+	if !list[0].AllowsEmail("alice@example.com") || !list[0].AllowsEmail("bob@example.com") {
+		t.Errorf("allowed emails not loaded: %v", list[0].AllowedEmails)
+	}
+}
+
 func TestShares_GetMissing_And_UpdateMissing(t *testing.T) {
 	st := openTemp(t)
 	repo := st.Shares()

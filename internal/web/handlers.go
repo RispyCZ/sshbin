@@ -47,6 +47,8 @@ type shareListItem struct {
 	S        sharing.Sharing
 	Expired  bool
 	ShareURL string
+	Expires  string
+	Emails   string
 }
 
 func (h *handler) sharesList(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +62,13 @@ func (h *handler) sharesList(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	items := make([]shareListItem, len(shares))
 	for i, s := range shares {
-		items[i] = shareListItem{S: s, Expired: s.Expired(now), ShareURL: h.baseURL + "/s/" + s.ID}
+		items[i] = shareListItem{
+			S:        s,
+			Expired:  s.Expired(now),
+			ShareURL: h.baseURL + "/s/" + s.ID,
+			Expires:  expiresBucket(s),
+			Emails:   strings.Join(s.AllowedEmails, "\n"),
+		}
 	}
 	h.render(w, r, http.StatusOK, "shares", map[string]any{"Items": items})
 }
@@ -153,6 +161,10 @@ func (h *handler) setupPost(w http.ResponseWriter, r *http.Request) {
 	if err := h.repo.Update(r.Context(), s); err != nil {
 		log.Error("update sharing", "id", s.ID, "err", err)
 		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not save settings."))
+		return
+	}
+	if r.FormValue("from") == "shares" {
+		http.Redirect(w, r, "/shares", http.StatusSeeOther)
 		return
 	}
 	h.renderSetup(w, r, s, true)
@@ -280,17 +292,22 @@ func (h *handler) lookup(w http.ResponseWriter, r *http.Request, id string) (sha
 }
 
 func (h *handler) renderSetup(w http.ResponseWriter, r *http.Request, s sharing.Sharing, saved bool) {
-	expires := ""
-	if s.ExpiresAt == nil {
-		expires = "never"
-	}
 	h.render(w, r, http.StatusOK, "setup", map[string]any{
 		"Sharing":  s,
 		"Saved":    saved,
-		"Expires":  expires,
+		"Expires":  expiresBucket(s),
 		"Emails":   strings.Join(s.AllowedEmails, "\n"),
 		"ShareURL": h.baseURL + "/s/" + s.ID,
 	})
+}
+
+// expiresBucket maps a share's expiry to the radio value used by the setup form.
+// A concrete future timestamp has no preset bucket and returns "".
+func expiresBucket(s sharing.Sharing) string {
+	if s.ExpiresAt == nil {
+		return "never"
+	}
+	return ""
 }
 
 // render writes a page, buffering first so a template error doesn't emit a
