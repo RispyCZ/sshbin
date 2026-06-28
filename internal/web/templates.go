@@ -15,13 +15,16 @@ var staticFS embed.FS
 
 // templates holds one fully-parsed template set per page, each composed with the
 // shared base layout. Parsing per-page avoids "content"/"title" block clashes.
+//
+// Only the public share-consumer pages remain server-rendered; the rest of the
+// templates/ directory is kept as reference for the React SPA migration.
 type templates struct {
 	pages map[string]*template.Template
 }
 
 func parseTemplates() (*templates, error) {
 	t := &templates{pages: make(map[string]*template.Template)}
-	for _, page := range []string{"index", "setup", "share", "share_password", "login", "verify", "error", "shares", "profile"} {
+	for _, page := range []string{"share", "share_password", "error"} {
 		parsed, err := template.ParseFS(templateFS, "templates/base.html", "templates/"+page+".html")
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", page, err)

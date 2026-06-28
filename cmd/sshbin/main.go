@@ -23,6 +23,8 @@ func main() {
 	baseURL := flag.String("base-url", "http://localhost:8080", "base URL for setup and share links")
 	storageDSN := flag.String("storage", "local://uploads", "storage backend DSN (local://path or s3://bucket/prefix)")
 	dsn := flag.String("db", "sqlite://sshbin.db", "database DSN (e.g. sqlite://sshbin.db)")
+	dev := flag.Bool("dev", false, "serve the SPA from the Vite dev server for HMR (run `vp dev` alongside)")
+	viteOrigin := flag.String("vite-origin", "http://localhost:5173", "Vite dev server URL used with -dev")
 	flag.Parse()
 
 	db, err := sqlstore.Open(*dsn)
@@ -58,6 +60,8 @@ func main() {
 		ListenAddr: *webAddr,
 		BaseURL:    *baseURL,
 		Secret:     secret,
+		Dev:        *dev,
+		ViteOrigin: *viteOrigin,
 	}, repo, st, authMgr, db.UserPrefs())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

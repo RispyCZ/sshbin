@@ -67,157 +67,21 @@ func login(t *testing.T, h *handler, sender *testSender, email string) *http.Coo
 	return &http.Cookie{Name: sessionCookie, Value: token}
 }
 
-func TestIndex(t *testing.T) {
-	h, _ := newTestHandler(t, sharing.NewMemoryRepository())
-	rec := httptest.NewRecorder()
-	h.index(rec, httptest.NewRequest("GET", "/", nil))
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	if !strings.Contains(rec.Body.String(), "example.com:") {
-		t.Error("index missing scp host hint")
-	}
-}
-
 func TestRequireSession_RedirectsAnonymous(t *testing.T) {
 	h, _ := newTestHandler(t, sharing.NewMemoryRepository())
-	req := httptest.NewRequest("GET", "/setup/abc", nil)
+	req := httptest.NewRequest("GET", "/shares/abc/qr", nil)
 	rec := httptest.NewRecorder()
 
-	h.requireSession(h.setupGet)(rec, req)
+	called := false
+	h.requireSession(func(http.ResponseWriter, *http.Request) { called = true })(rec, req)
+	if called {
+		t.Error("wrapped handler should not run for anonymous request")
+	}
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("status = %d, want 303 redirect", rec.Code)
 	}
 	if loc := rec.Header().Get("Location"); !strings.HasPrefix(loc, "/login?next=") {
 		t.Errorf("Location = %q, want /login redirect", loc)
-	}
-}
-
-func TestSetupGet_NotFound(t *testing.T) {
-	h, sender := newTestHandler(t, sharing.NewMemoryRepository())
-	req := httptest.NewRequest("GET", "/setup/missing", nil)
-	req.AddCookie(login(t, h, sender, "u@e.com"))
-	req.SetPathValue("id", "missing")
-	rec := httptest.NewRecorder()
-
-	h.setupGet(rec, req)
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want 404", rec.Code)
-	}
-}
-
-func TestSetupPost_PersistsAndClaims(t *testing.T) {
-	repo := sharing.NewMemoryRepository()
-	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", CreatedAt: time.Now()})
-	h, sender := newTestHandler(t, repo)
-
-	form := url.Values{
-		"expires":    {"24h"},
-		"visibility": {"private"},
-		"emails":     {"Alice@Example.com, bob@example.com"},
-		"password":   {"secret"},
-	}
-	req := httptest.NewRequest("POST", "/setup/abc", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.AddCookie(login(t, h, sender, "owner@example.com"))
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.setupPost(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-
-	got, _ := repo.Get(context.Background(), "abc")
-	if !got.Configured || got.Public {
-		t.Errorf("expected configured private share, got %+v", got)
-	}
-	if got.OwnerEmail != "owner@example.com" {
-		t.Errorf("OwnerEmail = %q", got.OwnerEmail)
-	}
-	if !got.AllowsEmail("alice@example.com") || !got.AllowsEmail("bob@example.com") {
-		t.Errorf("allowlist not parsed: %v", got.AllowedEmails)
-	}
-	if !got.CheckPassword("secret") {
-		t.Error("password not stored/hashed correctly")
-	}
-	if !strings.Contains(rec.Body.String(), "http://example.com/s/abc") {
-		t.Error("response missing share URL")
-	}
-}
-
-func TestSetupPost_FromShares_Redirects(t *testing.T) {
-	repo := sharing.NewMemoryRepository()
-	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", CreatedAt: time.Now()})
-	h, sender := newTestHandler(t, repo)
-
-	form := url.Values{
-		"expires":    {"never"},
-		"visibility": {"public"},
-		"from":       {"shares"},
-	}
-	req := httptest.NewRequest("POST", "/setup/abc", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.AddCookie(login(t, h, sender, "owner@example.com"))
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.setupPost(rec, req)
-	if rec.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d, want 303", rec.Code)
-	}
-	if loc := rec.Header().Get("Location"); loc != "/shares" {
-		t.Errorf("Location = %q, want /shares", loc)
-	}
-
-	got, _ := repo.Get(context.Background(), "abc")
-	if !got.Configured || !got.Public || got.ExpiresAt != nil {
-		t.Errorf("expected configured public never-expiring share, got %+v", got)
-	}
-}
-
-func TestSharesList_IncludesEditData(t *testing.T) {
-	repo := sharing.NewMemoryRepository()
-	repo.Create(context.Background(), sharing.Sharing{
-		ID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com",
-		Configured: true, Public: true, CreatedAt: time.Now(),
-	})
-	h, sender := newTestHandler(t, repo)
-
-	req := httptest.NewRequest("GET", "/shares", nil)
-	req.AddCookie(login(t, h, sender, "owner@example.com"))
-	rec := httptest.NewRecorder()
-
-	h.sharesList(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	body := rec.Body.String()
-	if !strings.Contains(body, "<sb-setup-modal") {
-		t.Error("response missing sb-setup-modal")
-	}
-	if !strings.Contains(body, `expires="never"`) {
-		t.Error("response missing expires bucket")
-	}
-	if !strings.Contains(body, "configured") {
-		t.Error("response missing configured flag")
-	}
-}
-
-func TestSetup_ForbiddenForNonOwner(t *testing.T) {
-	repo := sharing.NewMemoryRepository()
-	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com", Configured: true})
-	h, sender := newTestHandler(t, repo)
-
-	req := httptest.NewRequest("GET", "/setup/abc", nil)
-	req.AddCookie(login(t, h, sender, "intruder@example.com"))
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.setupGet(rec, req)
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want 403", rec.Code)
 	}
 }
 
@@ -452,52 +316,3 @@ func TestShareView_Expired(t *testing.T) {
 	}
 }
 
-func TestVerifyPost_SetsSessionAndRedirects(t *testing.T) {
-	h, sender := newTestHandler(t, sharing.NewMemoryRepository())
-	h.auth.StartLogin(context.Background(), "u@e.com")
-
-	form := url.Values{"email": {"u@e.com"}, "code": {sender.code}, "next": {"/setup/abc"}}
-	req := httptest.NewRequest("POST", "/verify", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	rec := httptest.NewRecorder()
-
-	h.verifyPost(rec, req)
-	if rec.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d, want 303", rec.Code)
-	}
-	if loc := rec.Header().Get("Location"); loc != "/setup/abc?flash=signed_in" {
-		t.Errorf("Location = %q, want /setup/abc?flash=signed_in", loc)
-	}
-	if !strings.Contains(rec.Header().Get("Set-Cookie"), sessionCookie) {
-		t.Error("session cookie not set")
-	}
-}
-
-func TestParseExpiry(t *testing.T) {
-	now := time.Now()
-	if parseExpiry("never", now) != nil {
-		t.Error(`"never" should yield nil`)
-	}
-	if parseExpiry("bogus", now) != nil {
-		t.Error("unknown preset should yield nil")
-	}
-	got := parseExpiry("1h", now)
-	if got == nil || !got.Equal(now.Add(time.Hour)) {
-		t.Errorf(`"1h" = %v, want %v`, got, now.Add(time.Hour))
-	}
-}
-
-func TestSafeNext(t *testing.T) {
-	cases := map[string]string{
-		"/setup/x":       "/setup/x",
-		"":               "/",
-		"//evil.com":     "/",
-		"https://evil":   "/",
-		"javascript:foo": "/",
-	}
-	for in, want := range cases {
-		if got := safeNext(in); got != want {
-			t.Errorf("safeNext(%q) = %q, want %q", in, got, want)
-		}
-	}
-}

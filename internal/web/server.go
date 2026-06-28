@@ -25,6 +25,11 @@ type Config struct {
 	// per start (fine for tests; supply a persisted secret in production so
 	// grants survive restarts).
 	Secret []byte
+	// Dev serves a SPA shell that loads modules from the Vite dev server for
+	// HMR. When false, the embedded production build is served.
+	Dev bool
+	// ViteOrigin is the Vite dev server URL used when Dev is true.
+	ViteOrigin string
 }
 
 type Server struct {
@@ -65,24 +70,34 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		tpl:           tpl,
 	}
 
+	viteOrigin := s.cfg.ViteOrigin
+	if viteOrigin == "" {
+		viteOrigin = "http://localhost:5173"
+	}
+	spa, err := newSPA(s.cfg.Dev, viteOrigin)
+	if err != nil {
+		return err
+	}
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", h.index)
-	mux.HandleFunc("GET /login", h.loginGet)
-	mux.HandleFunc("POST /login", h.loginPost)
-	mux.HandleFunc("POST /verify", h.verifyPost)
-	mux.HandleFunc("POST /logout", h.logout)
-	mux.HandleFunc("GET /shares", h.requireSession(h.sharesList))
+
+	// JSON API consumed by the SPA.
+	mux.HandleFunc("GET /api/session", h.apiSession)
+	mux.HandleFunc("POST /api/login", h.apiLogin)
+	mux.HandleFunc("POST /api/verify", h.apiVerify)
+	mux.HandleFunc("POST /api/logout", h.apiLogout)
+	mux.HandleFunc("GET /api/shares", h.requireSessionAPI(h.apiShares))
+	mux.HandleFunc("DELETE /api/shares/{id}", h.requireSessionAPI(h.apiDeleteShare))
+
+	// Public share consumer pages remain server-rendered.
 	mux.HandleFunc("GET /shares/{id}/qr", h.requireSession(h.shareQR))
-	mux.HandleFunc("POST /shares/{id}/delete", h.requireSession(h.deleteShare))
-	mux.HandleFunc("GET /setup/{id}", h.requireSession(h.setupGet))
-	mux.HandleFunc("POST /setup/{id}", h.requireSession(h.setupPost))
-	mux.HandleFunc("GET /profile", h.requireSession(h.profileGet))
-	mux.HandleFunc("POST /profile", h.requireSession(h.profilePost))
-	mux.HandleFunc("POST /profile/delete", h.requireSession(h.profileDelete))
 	mux.HandleFunc("GET /s/{id}", h.shareView)
 	mux.HandleFunc("POST /s/{id}", h.sharePassword)
 	mux.HandleFunc("GET /s/{id}/download", h.download)
 	mux.Handle("GET /static/", http.FileServerFS(staticFS))
+
+	// SPA owns the authenticated admin UI and all client-side routes.
+	mux.Handle("/", spa)
 
 	httpSrv := &http.Server{
 		Addr:              s.cfg.ListenAddr,

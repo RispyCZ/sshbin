@@ -8,7 +8,7 @@ export AWS_SECRET_ACCESS_KEY=dev
 export AWS_REGION=us-east-1
 
 dev:
-	watchexec -r -e go,js,css,html 'go build -o $(DEV_BIN) $(MAIN_PATH) && exec $(DEV_BIN) --storage s3://sshbin'
+	watchexec -r -e go,js,css,html 'go build -o $(DEV_BIN) $(MAIN_PATH) && exec $(DEV_BIN) --dev --storage s3://sshbin'
 
 build:
 	$(GO) build -o bin/$(BINARY_NAME) $(MAIN_PATH)

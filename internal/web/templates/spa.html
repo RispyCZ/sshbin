@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sshbin</title>
+    <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/static/img/favicon-32x32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/static/img/favicon-16x16.png" sizes="16x16" type="image/png" />
+    <link rel="apple-touch-icon" href="/static/img/favicon-180x180.png" />
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin />
+    <link
+      href="https://fonts.bunny.net/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+      rel="stylesheet"
+    />
+    {{.HeadExtra}}
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="{{.ScriptSrc}}"></script>
+  </body>
+</html>
