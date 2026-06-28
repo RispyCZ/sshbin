@@ -50,44 +50,8 @@ func (h *handler) shareQR(w http.ResponseWriter, r *http.Request) {
 	w.Write(png)
 }
 
-func (h *handler) shareView(w http.ResponseWriter, r *http.Request) {
-	s, ok := h.accessibleShare(w, r)
-	if !ok {
-		return
-	}
-	if !h.hasPasswordGrant(r, s) {
-		h.render(w, r, http.StatusOK, "share_password", map[string]any{"Sharing": s})
-		return
-	}
-	h.render(w, r, http.StatusOK, "share", map[string]any{
-		"Sharing":     s,
-		"DownloadURL": "/s/" + s.ID + "/download",
-	})
-}
-
-func (h *handler) sharePassword(w http.ResponseWriter, r *http.Request) {
-	s, ok := h.accessibleShare(w, r)
-	if !ok {
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		h.render(w, r, http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
-		return
-	}
-	if s.HasPassword() && !s.CheckPassword(r.FormValue("password")) {
-		h.render(w, r, http.StatusUnauthorized, "share_password", map[string]any{
-			"Sharing": s, "Error": "Incorrect password.",
-		})
-		return
-	}
-	// Grant access, then redirect (POST/redirect/GET) so refresh and the
-	// download link work without re-prompting.
-	h.setPasswordGrant(w, s.ID)
-	http.Redirect(w, r, "/s/"+s.ID, http.StatusSeeOther)
-}
-
 func (h *handler) download(w http.ResponseWriter, r *http.Request) {
-	s, ok := h.accessibleShare(w, r)
+	s, ok := h.accessibleShareHTML(w, r)
 	if !ok {
 		return
 	}
@@ -114,51 +78,70 @@ func (h *handler) download(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, s.FileName, modTime, rc)
 }
 
-// accessibleShare resolves a share and enforces existence, configuration,
+type accessResult int
+
+const (
+	accessOK accessResult = iota
+	accessNotFound
+	accessNotConfigured
+	accessExpired
+	accessNeedLogin
+	accessForbidden
+	accessError
+)
+
+// resolveShare fetches a share and classifies access: existence, configuration,
 // expiry, and visibility (private shares require a session whose email is
-// allowlisted). Password is enforced separately by the caller. It writes the
-// appropriate response and returns false when access is denied.
-func (h *handler) accessibleShare(w http.ResponseWriter, r *http.Request) (sharing.Sharing, bool) {
-	s, ok := h.lookup(w, r, r.PathValue("id"))
-	if !ok {
-		return sharing.Sharing{}, false
+// allowlisted). It is pure — callers render HTML or JSON from the result.
+// Password enforcement is separate (see hasPasswordGrant).
+func (h *handler) resolveShare(r *http.Request, id string) (sharing.Sharing, accessResult) {
+	s, err := h.repo.Get(r.Context(), id)
+	if errors.Is(err, sharing.ErrNotFound) {
+		return sharing.Sharing{}, accessNotFound
+	}
+	if err != nil {
+		log.Error("get sharing", "id", id, "err", err)
+		return sharing.Sharing{}, accessError
 	}
 	if !s.Configured {
-		h.render(w, r, http.StatusNotFound, "error", errData(http.StatusNotFound, "This share has not been set up yet."))
-		return sharing.Sharing{}, false
+		return s, accessNotConfigured
 	}
 	if s.Expired(time.Now()) {
-		h.render(w, r, http.StatusGone, "error", errData(http.StatusGone, "This share has expired."))
-		return sharing.Sharing{}, false
+		return s, accessExpired
 	}
 	if !s.Public {
 		sess, ok := h.currentSession(r)
 		if !ok {
-			http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.Path), http.StatusSeeOther)
-			return sharing.Sharing{}, false
+			return s, accessNeedLogin
 		}
 		if s.OwnerEmail != sess.Email && !s.AllowsEmail(sess.Email) {
-			h.render(w, r, http.StatusForbidden, "error", errData(http.StatusForbidden, "You don't have access to this share."))
-			return sharing.Sharing{}, false
+			return s, accessForbidden
 		}
 	}
-	return s, true
+	return s, accessOK
 }
 
-// lookup fetches a sharing by id, rendering a 404 and returning false when it is
-// absent. Other repository errors render a 500.
-func (h *handler) lookup(w http.ResponseWriter, r *http.Request, id string) (sharing.Sharing, bool) {
-	s, err := h.repo.Get(r.Context(), id)
-	if errors.Is(err, sharing.ErrNotFound) {
+// accessibleShareHTML resolves a share for the server-rendered download route,
+// writing an HTML error page (or login redirect) and returning false on denial.
+func (h *handler) accessibleShareHTML(w http.ResponseWriter, r *http.Request) (sharing.Sharing, bool) {
+	s, res := h.resolveShare(r, r.PathValue("id"))
+	switch res {
+	case accessOK:
+		return s, true
+	case accessNotFound:
 		h.render(w, r, http.StatusNotFound, "error", errData(http.StatusNotFound, "We couldn't find that share."))
-		return sharing.Sharing{}, false
-	}
-	if err != nil {
-		log.Error("get sharing", "id", id, "err", err)
+	case accessNotConfigured:
+		h.render(w, r, http.StatusNotFound, "error", errData(http.StatusNotFound, "This share has not been set up yet."))
+	case accessExpired:
+		h.render(w, r, http.StatusGone, "error", errData(http.StatusGone, "This share has expired."))
+	case accessNeedLogin:
+		http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.Path), http.StatusSeeOther)
+	case accessForbidden:
+		h.render(w, r, http.StatusForbidden, "error", errData(http.StatusForbidden, "You don't have access to this share."))
+	default:
 		h.render(w, r, http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Something went wrong."))
-		return sharing.Sharing{}, false
 	}
-	return s, true
+	return sharing.Sharing{}, false
 }
 
 // render writes a page, buffering first so a template error doesn't emit a

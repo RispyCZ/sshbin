@@ -4,12 +4,20 @@ import { AppBar, Box, CircularProgress, Container, Stack, Toolbar } from "@mui/m
 import { ApiError, api, type Session } from "../api/client.ts";
 import { Login } from "../routes/Login.tsx";
 import { Profile } from "../routes/Profile.tsx";
+import { SharePage } from "../routes/SharePage.tsx";
 import { Shares } from "../routes/Shares.tsx";
 import { Logo } from "./Logo.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 import { UserMenu } from "./UserMenu.tsx";
 
 type Auth = { state: "loading" } | { state: "out" } | { state: "in"; session: Session };
+
+// safeNext returns the post-login redirect target, rejecting absolute or
+// protocol-relative URLs to prevent open redirects (mirrors the server).
+function safeNext(): string {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
 
 export function App() {
   const [auth, setAuth] = useState<Auth>({ state: "loading" });
@@ -53,9 +61,14 @@ export function App() {
           <Route
             path="/login"
             element={
-              auth.state === "in" ? <Navigate to="/" replace /> : <Login onAuthed={refresh} />
+              auth.state === "in" ? (
+                <Navigate to={safeNext()} replace />
+              ) : (
+                <Login onAuthed={refresh} />
+              )
             }
           />
+          <Route path="/s/:id" element={<SharePage />} />
           <Route
             path="/"
             element={

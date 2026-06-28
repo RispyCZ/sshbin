@@ -29,12 +29,22 @@ export interface Profile {
   defaultPublic: boolean;
 }
 
+export interface ShareView {
+  fileName: string;
+  requiresPassword: boolean;
+  unlocked: boolean;
+  expiresAt: string | null;
+  downloadURL: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
+  readonly code?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -45,8 +55,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as { error?: string } | null;
-    throw new ApiError(res.status, body?.error ?? res.statusText);
+    const body = (await res.json().catch(() => null)) as {
+      error?: string;
+      code?: string;
+    } | null;
+    throw new ApiError(res.status, body?.error ?? res.statusText, body?.code);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
@@ -79,4 +92,10 @@ export const api = {
       body: JSON.stringify({ defaultPublic }),
     }),
   deleteAllData: () => request<void>("/api/profile", { method: "DELETE" }),
+  shareView: (id: string) => request<ShareView>(`/api/s/${id}`),
+  unlockShare: (id: string, password: string) =>
+    request<{ unlocked: boolean; downloadURL: string }>(`/api/s/${id}`, {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
 };

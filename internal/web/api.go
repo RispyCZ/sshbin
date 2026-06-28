@@ -173,6 +173,85 @@ func (h *handler) apiDeleteShare(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// writeAccessErr maps a non-OK access result to a JSON error response and
+// reports whether it wrote one (true means the caller should stop).
+func writeAccessErr(w http.ResponseWriter, res accessResult) bool {
+	switch res {
+	case accessOK:
+		return false
+	case accessNotFound:
+		writeErr(w, http.StatusNotFound, "We couldn't find that share.")
+	case accessNotConfigured:
+		writeErr(w, http.StatusNotFound, "This share has not been set up yet.")
+	case accessExpired:
+		writeErr(w, http.StatusGone, "This share has expired.")
+	case accessNeedLogin:
+		writeJSON(w, http.StatusUnauthorized, map[string]string{
+			"error": "Sign in to view this share.",
+			"code":  "login_required",
+		})
+	case accessForbidden:
+		writeErr(w, http.StatusForbidden, "You don't have access to this share.")
+	default:
+		writeErr(w, http.StatusInternalServerError, "Something went wrong.")
+	}
+	return true
+}
+
+type shareViewDTO struct {
+	FileName         string  `json:"fileName"`
+	RequiresPassword bool    `json:"requiresPassword"`
+	Unlocked         bool    `json:"unlocked"`
+	ExpiresAt        *string `json:"expiresAt"`
+	DownloadURL      string  `json:"downloadURL"`
+}
+
+func (h *handler) shareViewDTO(r *http.Request, s sharing.Sharing) shareViewDTO {
+	var exp *string
+	if s.ExpiresAt != nil {
+		v := s.ExpiresAt.Format(time.RFC3339)
+		exp = &v
+	}
+	return shareViewDTO{
+		FileName:         s.FileName,
+		RequiresPassword: s.HasPassword(),
+		Unlocked:         h.hasPasswordGrant(r, s),
+		ExpiresAt:        exp,
+		DownloadURL:      "/s/" + s.ID + "/download",
+	}
+}
+
+func (h *handler) apiShareView(w http.ResponseWriter, r *http.Request) {
+	s, res := h.resolveShare(r, r.PathValue("id"))
+	if writeAccessErr(w, res) {
+		return
+	}
+	writeJSON(w, http.StatusOK, h.shareViewDTO(r, s))
+}
+
+func (h *handler) apiSharePassword(w http.ResponseWriter, r *http.Request) {
+	s, res := h.resolveShare(r, r.PathValue("id"))
+	if writeAccessErr(w, res) {
+		return
+	}
+	var in struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeErr(w, http.StatusBadRequest, "Invalid request.")
+		return
+	}
+	if s.HasPassword() && !s.CheckPassword(in.Password) {
+		writeErr(w, http.StatusUnauthorized, "Incorrect password.")
+		return
+	}
+	h.setPasswordGrant(w, s.ID)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"unlocked":    true,
+		"downloadURL": "/s/" + s.ID + "/download",
+	})
+}
+
 var expiryPresets = map[string]time.Duration{
 	"1h":   time.Hour,
 	"24h":  24 * time.Hour,

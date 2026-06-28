@@ -93,10 +93,10 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.HandleFunc("PUT /api/profile", h.requireSessionAPI(h.apiProfileSave))
 	mux.HandleFunc("DELETE /api/profile", h.requireSessionAPI(h.apiProfileDeleteAll))
 
-	// Public share consumer pages remain server-rendered.
+	// Public share access (the /s/{id} page itself is the SPA shell).
+	mux.HandleFunc("GET /api/s/{id}", h.apiShareView)
+	mux.HandleFunc("POST /api/s/{id}", h.apiSharePassword)
 	mux.HandleFunc("GET /shares/{id}/qr", h.requireSession(h.shareQR))
-	mux.HandleFunc("GET /s/{id}", h.shareView)
-	mux.HandleFunc("POST /s/{id}", h.sharePassword)
 	mux.HandleFunc("GET /s/{id}/download", h.download)
 	mux.Handle("GET /static/", http.FileServerFS(staticFS))
 

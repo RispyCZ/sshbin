@@ -2,9 +2,9 @@ package web
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -85,37 +85,53 @@ func TestRequireSession_RedirectsAnonymous(t *testing.T) {
 	}
 }
 
-func TestShareView_PublicNoSession(t *testing.T) {
+func getShareView(t *testing.T, h *handler, id string, cookies ...*http.Cookie) (*httptest.ResponseRecorder, shareViewDTO) {
+	t.Helper()
+	req := httptest.NewRequest("GET", "/api/s/"+id, nil)
+	req.SetPathValue("id", id)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	h.apiShareView(rec, req)
+	var dto shareViewDTO
+	if rec.Code == http.StatusOK {
+		if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+			t.Fatalf("decode share view: %v", err)
+		}
+	}
+	return rec, dto
+}
+
+func TestAPIShareView_PublicNoSession(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", Configured: true, Public: true})
 	h, _ := newTestHandler(t, repo)
 
-	req := httptest.NewRequest("GET", "/s/abc", nil)
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.shareView(rec, req)
+	rec, dto := getShareView(t, h, "abc")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 for public share", rec.Code)
 	}
+	if dto.FileName != "f.txt" || dto.RequiresPassword || !dto.Unlocked {
+		t.Errorf("unexpected dto %+v", dto)
+	}
 }
 
-func TestShareView_PrivateRedirectsAnonymous(t *testing.T) {
+func TestAPIShareView_PrivateNeedsLogin(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", Configured: true})
 	h, _ := newTestHandler(t, repo)
 
-	req := httptest.NewRequest("GET", "/s/abc", nil)
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.shareView(rec, req)
-	if rec.Code != http.StatusSeeOther {
-		t.Fatalf("status = %d, want 303 redirect to login", rec.Code)
+	rec, _ := getShareView(t, h, "abc")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401 for anonymous private share", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "login_required") {
+		t.Error("expected login_required code")
 	}
 }
 
-func TestShareView_PrivateNotAllowed(t *testing.T) {
+func TestAPIShareView_PrivateNotAllowed(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	repo.Create(context.Background(), sharing.Sharing{
 		ID: "abc", FileName: "f.txt", Configured: true,
@@ -123,18 +139,13 @@ func TestShareView_PrivateNotAllowed(t *testing.T) {
 	})
 	h, sender := newTestHandler(t, repo)
 
-	req := httptest.NewRequest("GET", "/s/abc", nil)
-	req.AddCookie(login(t, h, sender, "stranger@example.com"))
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.shareView(rec, req)
+	rec, _ := getShareView(t, h, "abc", login(t, h, sender, "stranger@example.com"))
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403 for non-allowlisted email", rec.Code)
 	}
 }
 
-func TestShareView_PrivateAllowed(t *testing.T) {
+func TestAPIShareView_PrivateAllowed(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	repo.Create(context.Background(), sharing.Sharing{
 		ID: "abc", FileName: "f.txt", Configured: true,
@@ -142,63 +153,56 @@ func TestShareView_PrivateAllowed(t *testing.T) {
 	})
 	h, sender := newTestHandler(t, repo)
 
-	req := httptest.NewRequest("GET", "/s/abc", nil)
-	req.AddCookie(login(t, h, sender, "friend@example.com"))
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.shareView(rec, req)
+	rec, _ := getShareView(t, h, "abc", login(t, h, sender, "friend@example.com"))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 for allowlisted email", rec.Code)
 	}
 }
 
-func TestSharePassword_Gate(t *testing.T) {
+func TestAPIShareView_PasswordLocked(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	hash, _ := sharing.HashPassword("open-sesame")
 	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", Configured: true, Public: true, PasswordHash: hash})
 	h, _ := newTestHandler(t, repo)
 
-	// GET shows the password prompt, not the file.
-	getReq := httptest.NewRequest("GET", "/s/abc", nil)
-	getReq.SetPathValue("id", "abc")
-	getRec := httptest.NewRecorder()
-	h.shareView(getRec, getReq)
-	if !strings.Contains(getRec.Body.String(), "Password required") {
-		t.Error("expected password prompt on GET")
+	rec, dto := getShareView(t, h, "abc")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
 	}
+	if !dto.RequiresPassword || dto.Unlocked {
+		t.Errorf("expected locked password share, got %+v", dto)
+	}
+}
+
+func TestAPISharePassword_Gate(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	hash, _ := sharing.HashPassword("open-sesame")
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", Configured: true, Public: true, PasswordHash: hash})
+	h, _ := newTestHandler(t, repo)
 
 	// Wrong password -> 401.
-	bad := url.Values{"password": {"nope"}}
-	badReq := httptest.NewRequest("POST", "/s/abc", strings.NewReader(bad.Encode()))
-	badReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	badReq := httptest.NewRequest("POST", "/api/s/abc", strings.NewReader(`{"password":"nope"}`))
 	badReq.SetPathValue("id", "abc")
 	badRec := httptest.NewRecorder()
-	h.sharePassword(badRec, badReq)
+	h.apiSharePassword(badRec, badReq)
 	if badRec.Code != http.StatusUnauthorized {
 		t.Fatalf("wrong password status = %d, want 401", badRec.Code)
 	}
 
-	// Correct password -> grant cookie + redirect (PRG).
-	ok := url.Values{"password": {"open-sesame"}}
-	okReq := httptest.NewRequest("POST", "/s/abc", strings.NewReader(ok.Encode()))
-	okReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	// Correct password -> grant cookie + 200.
+	okReq := httptest.NewRequest("POST", "/api/s/abc", strings.NewReader(`{"password":"open-sesame"}`))
 	okReq.SetPathValue("id", "abc")
 	okRec := httptest.NewRecorder()
-	h.sharePassword(okRec, okReq)
-	if okRec.Code != http.StatusSeeOther {
-		t.Fatalf("correct password status = %d, want 303 redirect", okRec.Code)
+	h.apiSharePassword(okRec, okReq)
+	if okRec.Code != http.StatusOK {
+		t.Fatalf("correct password status = %d, want 200", okRec.Code)
 	}
 	grant := grantCookieFrom(t, okRec)
 
-	// With the grant cookie, GET shows the share page, not the prompt.
-	viewReq := httptest.NewRequest("GET", "/s/abc", nil)
-	viewReq.AddCookie(grant)
-	viewReq.SetPathValue("id", "abc")
-	viewRec := httptest.NewRecorder()
-	h.shareView(viewRec, viewReq)
-	if body := viewRec.Body.String(); !strings.Contains(body, "Shared file") || strings.Contains(body, "Unlock") {
-		t.Error("grant cookie should reveal the share page without re-prompt")
+	// With the grant cookie, the share view is unlocked.
+	_, dto := getShareView(t, h, "abc", grant)
+	if !dto.Unlocked {
+		t.Error("grant cookie should unlock the share view")
 	}
 }
 
@@ -300,17 +304,13 @@ func TestContentDisposition(t *testing.T) {
 	}
 }
 
-func TestShareView_Expired(t *testing.T) {
+func TestAPIShareView_Expired(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	past := time.Now().Add(-time.Hour)
 	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", Configured: true, Public: true, ExpiresAt: &past})
 	h, _ := newTestHandler(t, repo)
 
-	req := httptest.NewRequest("GET", "/s/abc", nil)
-	req.SetPathValue("id", "abc")
-	rec := httptest.NewRecorder()
-
-	h.shareView(rec, req)
+	rec, _ := getShareView(t, h, "abc")
 	if rec.Code != http.StatusGone {
 		t.Fatalf("status = %d, want 410 for expired share", rec.Code)
 	}
