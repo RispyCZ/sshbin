@@ -12,23 +12,23 @@ import {
   FormLabel,
   Radio,
   RadioGroup,
-  Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
 import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import SaveIcon from "@mui/icons-material/Save";
-import { ApiError, api } from "../api/client.ts";
+import { ApiError, api, errMessage } from "../api/client.ts";
+import { useNotify } from "../components/NotifyProvider.tsx";
 import { useConfirm } from "../components/useConfirm.tsx";
 
 export function Profile({ onSignedOut }: { onSignedOut: () => void }) {
   const navigate = useNavigate();
+  const notify = useNotify();
   const { confirm, dialog: confirmDialog } = useConfirm();
   const [loaded, setLoaded] = useState(false);
   const [email, setEmail] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -44,12 +44,11 @@ export function Profile({ onSignedOut }: { onSignedOut: () => void }) {
   }, []);
 
   async function save() {
-    setError("");
     try {
       await api.saveProfile(visibility === "public");
-      setSaved(true);
+      notify("Preferences saved");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save preferences.");
+      notify(errMessage(err, "Could not save preferences."), "error");
     }
   }
 
@@ -61,13 +60,13 @@ export function Profile({ onSignedOut }: { onSignedOut: () => void }) {
       danger: true,
     });
     if (!ok) return;
-    setError("");
     try {
       await api.deleteAllData();
+      notify("All data deleted");
       onSignedOut();
       void navigate("/login", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not delete data.");
+      notify(errMessage(err, "Could not delete data."), "error");
     }
   }
 
@@ -143,13 +142,6 @@ export function Profile({ onSignedOut }: { onSignedOut: () => void }) {
         </CardContent>
       </Card>
 
-      {error && <Alert severity="error">{error}</Alert>}
-      <Snackbar
-        open={saved}
-        autoHideDuration={2500}
-        onClose={() => setSaved(false)}
-        message="Preferences saved"
-      />
       {confirmDialog}
     </Stack>
   );

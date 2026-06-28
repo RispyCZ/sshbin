@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Link as RouterLink, Route, Routes, useLocation } from "react-router-dom";
 import { AppBar, Box, CircularProgress, Container, Stack, Toolbar } from "@mui/material";
-import { ApiError, api, type Session } from "../api/client.ts";
+import { ApiError, api, errMessage, type Session } from "../api/client.ts";
 import { Login } from "../routes/Login.tsx";
 import { Profile } from "../routes/Profile.tsx";
 import { Setup } from "../routes/Setup.tsx";
 import { Shares } from "../routes/Shares.tsx";
 import { Logo } from "./Logo.tsx";
+import { useNotify } from "./NotifyProvider.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
 import { UserMenu } from "./UserMenu.tsx";
 
@@ -21,6 +22,7 @@ function safeNext(): string {
 
 export function App() {
   const [auth, setAuth] = useState<Auth>({ state: "loading" });
+  const notify = useNotify();
 
   const refresh = useCallback(async () => {
     try {
@@ -52,8 +54,13 @@ export function App() {
       <Header
         session={auth.state === "in" ? auth.session : null}
         onLogout={async () => {
-          await api.logout();
-          setAuth({ state: "out" });
+          try {
+            await api.logout();
+            setAuth({ state: "out" });
+            notify("Signed out");
+          } catch (err) {
+            notify(errMessage(err, "Could not sign out."), "error");
+          }
         }}
       />
       <Container maxWidth="md" sx={{ py: 4 }}>

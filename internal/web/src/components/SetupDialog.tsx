@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -15,7 +14,8 @@ import {
   TextField,
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
-import { ApiError, api, type Expiry, type Share } from "../api/client.ts";
+import { api, errMessage, type Expiry, type Share } from "../api/client.ts";
+import { useNotify } from "./NotifyProvider.tsx";
 
 export function SetupDialog({
   share,
@@ -36,12 +36,11 @@ export function SetupDialog({
   );
   const [emails, setEmails] = useState(share.allowedEmails.join("\n"));
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const notify = useNotify();
 
   async function save() {
     setBusy(true);
-    setError("");
     try {
       const updated = await api.setupShare(share.id, {
         expires,
@@ -55,7 +54,7 @@ export function SetupDialog({
       onSaved(updated);
       onClose();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save settings.");
+      notify(errMessage(err, "Could not save settings."), "error");
     } finally {
       setBusy(false);
     }
@@ -118,8 +117,6 @@ export function SetupDialog({
             autoComplete="new-password"
             fullWidth
           />
-
-          {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>

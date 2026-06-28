@@ -1,28 +1,28 @@
 import { useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import LoginIcon from "@mui/icons-material/Login";
 import SendIcon from "@mui/icons-material/Send";
-import { ApiError, api } from "../api/client.ts";
+import { api, errMessage } from "../api/client.ts";
 import { Logo } from "../components/Logo.tsx";
+import { useNotify } from "../components/NotifyProvider.tsx";
 
 export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
+  const notify = useNotify();
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [masked, setMasked] = useState("");
   const [code, setCode] = useState("");
-  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    setError("");
     try {
       const { maskedEmail } = await api.login(email.trim());
       setMasked(maskedEmail);
       setStep("code");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not send a code.");
+      notify(errMessage(err, "Could not send a code."), "error");
     } finally {
       setBusy(false);
     }
@@ -31,12 +31,12 @@ export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    setError("");
     try {
       await api.verify(email.trim(), code.trim());
+      notify("Signed in");
       await onAuthed();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not verify.");
+      notify(errMessage(err, "Could not verify."), "error");
     } finally {
       setBusy(false);
     }
@@ -65,7 +65,6 @@ export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
                 autoFocus
                 fullWidth
               />
-              {error && <Alert severity="error">{error}</Alert>}
               <Button type="submit" variant="contained" disabled={busy} startIcon={<SendIcon />}>
                 {busy ? "Sending…" : "Send code"}
               </Button>
@@ -88,7 +87,6 @@ export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
                 autoFocus
                 fullWidth
               />
-              {error && <Alert severity="error">{error}</Alert>}
               <Button type="submit" variant="contained" disabled={busy} startIcon={<LoginIcon />}>
                 {busy ? "Verifying…" : "Verify"}
               </Button>

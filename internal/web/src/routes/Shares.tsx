@@ -21,7 +21,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import ShareIcon from "@mui/icons-material/Share";
 import TuneIcon from "@mui/icons-material/Tune";
-import { ApiError, api, type Share } from "../api/client.ts";
+import { ApiError, api, errMessage, type Share } from "../api/client.ts";
+import { useNotify } from "../components/NotifyProvider.tsx";
 import { SetupDialog } from "../components/SetupDialog.tsx";
 import { ShareDialog } from "../components/ShareDialog.tsx";
 import { useConfirm } from "../components/useConfirm.tsx";
@@ -33,6 +34,7 @@ function formatExpiry(s: Share): string {
 }
 
 export function Shares() {
+  const notify = useNotify();
   const [shares, setShares] = useState<Share[] | null>(null);
   const [error, setError] = useState("");
   const [setupTarget, setSetupTarget] = useState<Share | null>(null);
@@ -60,8 +62,13 @@ export function Shares() {
       danger: true,
     });
     if (!ok) return;
-    await api.deleteShare(s.id);
-    await load();
+    try {
+      await api.deleteShare(s.id);
+      notify("Share deleted");
+      await load();
+    } catch (err) {
+      notify(errMessage(err, "Could not delete share."), "error");
+    }
   }
 
   if (error) return <Alert severity="error">{error}</Alert>;
@@ -163,7 +170,10 @@ export function Shares() {
           share={setupTarget}
           open
           onClose={() => setSetupTarget(null)}
-          onSaved={() => void load()}
+          onSaved={() => {
+            notify("Share saved");
+            void load();
+          }}
         />
       )}
       {qrTarget && <ShareDialog share={qrTarget} open onClose={() => setQrTarget(null)} />}
