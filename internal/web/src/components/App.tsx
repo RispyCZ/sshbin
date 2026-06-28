@@ -4,7 +4,7 @@ import { AppBar, Box, CircularProgress, Container, Stack, Toolbar } from "@mui/m
 import { ApiError, api, type Session } from "../api/client.ts";
 import { Login } from "../routes/Login.tsx";
 import { Profile } from "../routes/Profile.tsx";
-import { SharePage } from "../routes/SharePage.tsx";
+import { Setup } from "../routes/Setup.tsx";
 import { Shares } from "../routes/Shares.tsx";
 import { Logo } from "./Logo.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
@@ -68,7 +68,7 @@ export function App() {
               )
             }
           />
-          <Route path="/s/:id" element={<SharePage />} />
+          <Route path="/s/:id" element={<Setup />} />
           <Route
             path="/"
             element={

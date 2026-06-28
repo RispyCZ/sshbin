@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import QrCode2Icon from "@mui/icons-material/QrCode2";
+import ShareIcon from "@mui/icons-material/Share";
 import TuneIcon from "@mui/icons-material/Tune";
 import { ApiError, api, type Share } from "../api/client.ts";
 import { SetupDialog } from "../components/SetupDialog.tsx";
@@ -128,7 +128,7 @@ export function Shares() {
                         aria-label={`share ${s.fileName}`}
                         onClick={() => setQrTarget(s)}
                       >
-                        <QrCode2Icon fontSize="small" />
+                        <ShareIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                   )}
