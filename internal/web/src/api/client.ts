@@ -10,7 +10,23 @@ export interface Share {
   expired: boolean;
   expiresAt: string | null;
   allowedEmails: string[];
+  hasPassword: boolean;
+  createdAt: string;
   shareURL: string;
+}
+
+export type Expiry = "1h" | "24h" | "168h" | "never";
+
+export interface SetupInput {
+  expires: Expiry;
+  visibility: "public" | "private";
+  emails: string[];
+  password: string;
+}
+
+export interface Profile {
+  email: string;
+  defaultPublic: boolean;
 }
 
 export class ApiError extends Error {
@@ -51,4 +67,16 @@ export const api = {
   logout: () => request<void>("/api/logout", { method: "POST" }),
   shares: () => request<Share[]>("/api/shares"),
   deleteShare: (id: string) => request<void>(`/api/shares/${id}`, { method: "DELETE" }),
+  setupShare: (id: string, input: SetupInput) =>
+    request<Share>(`/api/setup/${id}`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  profile: () => request<Profile>("/api/profile"),
+  saveProfile: (defaultPublic: boolean) =>
+    request<void>("/api/profile", {
+      method: "PUT",
+      body: JSON.stringify({ defaultPublic }),
+    }),
+  deleteAllData: () => request<void>("/api/profile", { method: "DELETE" }),
 };

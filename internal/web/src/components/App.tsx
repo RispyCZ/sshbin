@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Navigate, Link, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Link as RouterLink, Route, Routes, useLocation } from "react-router-dom";
+import { AppBar, Box, CircularProgress, Container, Stack, Toolbar } from "@mui/material";
 import { ApiError, api, type Session } from "../api/client.ts";
 import { Login } from "../routes/Login.tsx";
+import { Profile } from "../routes/Profile.tsx";
 import { Shares } from "../routes/Shares.tsx";
+import { Logo } from "./Logo.tsx";
+import { ThemeToggle } from "./ThemeToggle.tsx";
+import { UserMenu } from "./UserMenu.tsx";
 
 type Auth = { state: "loading" } | { state: "out" } | { state: "in"; session: Session };
 
@@ -27,11 +32,15 @@ export function App() {
   }, [refresh]);
 
   if (auth.state === "loading") {
-    return <div className="center muted">Loading…</div>;
+    return (
+      <Box sx={{ display: "grid", placeItems: "center", minHeight: "100vh" }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
-    <div className="app">
+    <Box sx={{ minHeight: "100vh" }}>
       <Header
         session={auth.state === "in" ? auth.session : null}
         onLogout={async () => {
@@ -39,7 +48,7 @@ export function App() {
           setAuth({ state: "out" });
         }}
       />
-      <main className="container">
+      <Container maxWidth="md" sx={{ py: 4 }}>
         <Routes>
           <Route
             path="/login"
@@ -55,28 +64,39 @@ export function App() {
               </RequireAuth>
             }
           />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth authed={auth.state === "in"}>
+                <Profile onSignedOut={() => setAuth({ state: "out" })} />
+              </RequireAuth>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </main>
-    </div>
+      </Container>
+    </Box>
   );
 }
 
 function Header({ session, onLogout }: { session: Session | null; onLogout: () => void }) {
   return (
-    <header className="header">
-      <Link to="/" className="brand">
-        sshbin
-      </Link>
-      {session && (
-        <div className="user">
-          <span className="muted">{session.email}</span>
-          <button type="button" onClick={onLogout}>
-            Log out
-          </button>
-        </div>
-      )}
-    </header>
+    <AppBar
+      position="static"
+      color="transparent"
+      elevation={0}
+      sx={{ borderBottom: 1, borderColor: "divider" }}
+    >
+      <Toolbar>
+        <Box component={RouterLink} to="/" sx={{ display: "flex", flexGrow: 1 }}>
+          <Logo height={26} />
+        </Box>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+          <ThemeToggle />
+          {session && <UserMenu email={session.email} onLogout={onLogout} />}
+        </Stack>
+      </Toolbar>
+    </AppBar>
   );
 }
 

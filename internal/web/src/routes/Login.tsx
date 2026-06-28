@@ -1,5 +1,9 @@
 import { useState } from "react";
+import { Alert, Box, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
+import LoginIcon from "@mui/icons-material/Login";
+import SendIcon from "@mui/icons-material/Send";
 import { ApiError, api } from "../api/client.ts";
+import { Logo } from "../components/Logo.tsx";
 
 export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
   const [step, setStep] = useState<"email" | "code">("email");
@@ -39,42 +43,59 @@ export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
   }
 
   return (
-    <div className="card narrow">
-      {step === "email" ? (
-        <form onSubmit={submitEmail}>
-          <h1>Sign in</h1>
-          <p className="muted">We&apos;ll email you a one-time code.</p>
-          <input
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoFocus
-          />
-          {error && <p className="error">{error}</p>}
-          <button type="submit" disabled={busy}>
-            {busy ? "Sending…" : "Send code"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={submitCode}>
-          <h1>Enter code</h1>
-          <p className="muted">Sent to {masked}.</p>
-          <input
-            inputMode="numeric"
-            placeholder="123456"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-            autoFocus
-          />
-          {error && <p className="error">{error}</p>}
-          <button type="submit" disabled={busy}>
-            {busy ? "Verifying…" : "Verify"}
-          </button>
-        </form>
-      )}
-    </div>
+    <Box sx={{ maxWidth: 380, mx: "auto", mt: 8 }}>
+      <Card variant="outlined">
+        <CardContent sx={{ p: 4 }}>
+          <Logo height={30} sx={{ mb: 3 }} />
+          {step === "email" ? (
+            <Stack component="form" spacing={2} onSubmit={submitEmail}>
+              <Typography variant="h5" component="h1">
+                Sign in
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                We&apos;ll email you a one-time code.
+              </Typography>
+              <TextField
+                label="Email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                fullWidth
+              />
+              {error && <Alert severity="error">{error}</Alert>}
+              <Button type="submit" variant="contained" disabled={busy} startIcon={<SendIcon />}>
+                {busy ? "Sending…" : "Send code"}
+              </Button>
+            </Stack>
+          ) : (
+            <Stack component="form" spacing={2} onSubmit={submitCode}>
+              <Typography variant="h5" component="h1">
+                Enter code
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Sent to {masked}.
+              </Typography>
+              <TextField
+                label="Code"
+                placeholder="123456"
+                slotProps={{ htmlInput: { inputMode: "numeric" } }}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+                autoFocus
+                fullWidth
+              />
+              {error && <Alert severity="error">{error}</Alert>}
+              <Button type="submit" variant="contained" disabled={busy} startIcon={<LoginIcon />}>
+                {busy ? "Verifying…" : "Verify"}
+              </Button>
+            </Stack>
+          )}
+        </CardContent>
+      </Card>
+    </Box>
   );
 }
