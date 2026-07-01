@@ -11,6 +11,7 @@ import {
   Typography,
 } from "@mui/material";
 import { ApiError, api, errMessage, type Session } from "../api/client.ts";
+import { Landing } from "../routes/Landing.tsx";
 import { Login } from "../routes/Login.tsx";
 import { Profile } from "../routes/Profile.tsx";
 import { Setup } from "../routes/Setup.tsx";
@@ -26,7 +27,7 @@ type Auth = { state: "loading" } | { state: "out" } | { state: "in"; session: Se
 // protocol-relative URLs to prevent open redirects (mirrors the server).
 function safeNext(): string {
   const next = new URLSearchParams(window.location.search).get("next");
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/shares";
 }
 
 export function App() {
@@ -85,8 +86,9 @@ export function App() {
             }
           />
           <Route path="/s/:id" element={<Setup />} />
+          <Route path="/" element={<Landing />} />
           <Route
-            path="/"
+            path="/shares"
             element={
               <RequireAuth authed={auth.state === "in"}>
                 <Shares />

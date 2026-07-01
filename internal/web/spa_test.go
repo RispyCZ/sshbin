@@ -8,7 +8,7 @@ import (
 )
 
 func TestSPA_ProdServesShell(t *testing.T) {
-	s, err := newSPA(false, "")
+	s, err := newSPA(false, "", "example.com")
 	if err != nil {
 		t.Fatalf("newSPA: %v", err)
 	}
@@ -24,10 +24,13 @@ func TestSPA_ProdServesShell(t *testing.T) {
 	if !strings.Contains(body, `src="/assets/`) {
 		t.Error("prod shell should reference a hashed /assets/ bundle from the manifest")
 	}
+	if !strings.Contains(body, `name="sshbin-host" content="example.com"`) {
+		t.Error("shell should expose the SSH host for the landing page scp example")
+	}
 }
 
 func TestSPA_ProdFallbackForClientRoute(t *testing.T) {
-	s, _ := newSPA(false, "")
+	s, _ := newSPA(false, "", "example.com")
 	rec := httptest.NewRecorder()
 	s.ServeHTTP(rec, httptest.NewRequest("GET", "/shares/deep/link", nil))
 	if rec.Code != http.StatusOK {
@@ -39,7 +42,7 @@ func TestSPA_ProdFallbackForClientRoute(t *testing.T) {
 }
 
 func TestSPA_ProdServesHashedAsset(t *testing.T) {
-	s, _ := newSPA(false, "")
+	s, _ := newSPA(false, "", "example.com")
 	idx := httptest.NewRecorder()
 	s.ServeHTTP(idx, httptest.NewRequest("GET", "/", nil))
 	asset := extractAssetPath(idx.Body.String())
@@ -57,7 +60,7 @@ func TestSPA_ProdServesHashedAsset(t *testing.T) {
 }
 
 func TestSPA_DevPointsAtViteServer(t *testing.T) {
-	s, err := newSPA(true, "http://localhost:5173")
+	s, err := newSPA(true, "http://localhost:5173", "ssh.example.com")
 	if err != nil {
 		t.Fatalf("newSPA dev: %v", err)
 	}
@@ -76,7 +79,7 @@ func TestSPA_DevPointsAtViteServer(t *testing.T) {
 }
 
 func TestSPA_DevDoesNotServeAssets(t *testing.T) {
-	s, _ := newSPA(true, "http://localhost:5173")
+	s, _ := newSPA(true, "http://localhost:5173", "ssh.example.com")
 	rec := httptest.NewRecorder()
 	// In dev, assets come from Vite, so even an /assets/ path returns the shell.
 	s.ServeHTTP(rec, httptest.NewRequest("GET", "/assets/whatever.js", nil))

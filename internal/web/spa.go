@@ -30,8 +30,9 @@ type viteChunk struct {
 }
 
 // newSPA builds the SPA server. When dev is true, viteOrigin is the Vite dev
-// server URL (e.g. http://localhost:5173) and assets are served by Vite.
-func newSPA(dev bool, viteOrigin string) (*spaServer, error) {
+// server URL (e.g. http://localhost:5173) and assets are served by Vite. host
+// is the SSH host shown in the landing page's example scp command.
+func newSPA(dev bool, viteOrigin, host string) (*spaServer, error) {
 	shellTpl, err := template.ParseFS(templateFS, "templates/spa.html")
 	if err != nil {
 		return nil, err
@@ -40,7 +41,9 @@ func newSPA(dev bool, viteOrigin string) (*spaServer, error) {
 	var data struct {
 		HeadExtra template.HTML
 		ScriptSrc string
+		Host      string
 	}
+	data.Host = host
 
 	if dev {
 		viteOrigin = strings.TrimRight(viteOrigin, "/")

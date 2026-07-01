@@ -74,7 +74,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	if viteOrigin == "" {
 		viteOrigin = "http://localhost:5173"
 	}
-	spa, err := newSPA(s.cfg.Dev, viteOrigin)
+	spa, err := newSPA(s.cfg.Dev, viteOrigin, hostFromURL(s.cfg.BaseURL))
 	if err != nil {
 		return err
 	}

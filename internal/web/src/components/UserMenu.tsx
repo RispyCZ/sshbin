@@ -40,7 +40,7 @@ export function UserMenu({ email, onLogout }: { email: string; onLogout: () => v
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <MenuItem component={RouterLink} to="/" onClick={close}>
+        <MenuItem component={RouterLink} to="/shares" onClick={close}>
           <ListItemIcon>
             <FolderIcon fontSize="small" />
           </ListItemIcon>
