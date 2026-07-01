@@ -145,12 +145,8 @@ func (h *handler) accessibleShareHTML(w http.ResponseWriter, r *http.Request) (s
 }
 
 // render writes a page, buffering first so a template error doesn't emit a
-// half-written response with an already-committed 200 status. It injects the
-// current session into data so the base layout can render the user menu.
-func (h *handler) render(w http.ResponseWriter, r *http.Request, status int, page string, data map[string]any) {
-	if sess, ok := h.currentSession(r); ok {
-		data["Session"] = sess
-	}
+// half-written response with an already-committed 200 status.
+func (h *handler) render(w http.ResponseWriter, _ *http.Request, status int, page string, data map[string]any) {
 	var buf bytes.Buffer
 	if err := h.tpl.render(&buf, page, data); err != nil {
 		log.Error("render", "page", page, "err", err)

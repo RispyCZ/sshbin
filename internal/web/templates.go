@@ -13,11 +13,9 @@ var templateFS embed.FS
 //go:embed static
 var staticFS embed.FS
 
-// templates holds one fully-parsed template set per page, each composed with the
-// shared base layout. Parsing per-page avoids "content"/"title" block clashes.
-//
-// Only the binary download's error page is still server-rendered; the rest of
-// the templates/ directory is kept as reference for the React SPA migration.
+// templates holds one standalone template per server-rendered page. Only the
+// binary download's error page is server-rendered; the rest of the UI is the
+// React SPA.
 type templates struct {
 	pages map[string]*template.Template
 }
@@ -25,7 +23,7 @@ type templates struct {
 func parseTemplates() (*templates, error) {
 	t := &templates{pages: make(map[string]*template.Template)}
 	for _, page := range []string{"error"} {
-		parsed, err := template.ParseFS(templateFS, "templates/base.html", "templates/"+page+".html")
+		parsed, err := template.ParseFS(templateFS, "templates/"+page+".html")
 		if err != nil {
 			return nil, fmt.Errorf("parse %s: %w", page, err)
 		}
@@ -39,5 +37,5 @@ func (t *templates) render(w io.Writer, page string, data any) error {
 	if !ok {
 		return fmt.Errorf("unknown page %q", page)
 	}
-	return tpl.ExecuteTemplate(w, "base.html", data)
+	return tpl.Execute(w, data)
 }

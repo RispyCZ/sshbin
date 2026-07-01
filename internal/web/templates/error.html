@@ -1,8 +1,88 @@
-{{define "title"}}{{.Status}} — sshbin{{end}}
-{{define "content"}}
-<section class="card center">
-  <h1 class="error-code">{{.Status}}</h1>
-  <p>{{.Message}}</p>
-  <a class="btn-primary" href="/"><span class="material-icons">home</span>Back home</a>
-</section>
-{{end}}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Status}} — sshbin</title>
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/img/favicon-32x32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="/static/img/favicon-16x16.png" sizes="16x16" type="image/png">
+  <link rel="apple-touch-icon" href="/static/img/favicon-180x180.png">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --muted: #6b7280;
+      --accent: #16a34a;
+      --accent-fg: #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --fg: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #22c55e;
+        --accent-fg: #04140a;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 1.5rem;
+      font-family: "Noto Sans", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+
+    main {
+      text-align: center;
+      max-width: 26rem;
+    }
+
+    .code {
+      font-size: 4rem;
+      font-weight: 800;
+      line-height: 1;
+      margin: 0 0 0.5rem;
+    }
+
+    p {
+      color: var(--muted);
+      margin: 0 0 1.5rem;
+    }
+
+    a {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.5rem;
+      background: var(--accent);
+      color: var(--accent-fg);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    a:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1 class="code">{{.Status}}</h1>
+    <p>{{.Message}}</p>
+    <a href="/">Back home</a>
+  </main>
+</body>
+
+</html>
