@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, Link as RouterLink, Route, Routes, useLocation } from "react-router-dom";
-import { AppBar, Box, CircularProgress, Container, Stack, Toolbar } from "@mui/material";
+import {
+  AppBar,
+  Box,
+  CircularProgress,
+  Container,
+  Link,
+  Stack,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 import { ApiError, api, errMessage, type Session } from "../api/client.ts";
 import { Login } from "../routes/Login.tsx";
 import { Profile } from "../routes/Profile.tsx";
@@ -50,7 +59,7 @@ export function App() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <Header
         session={auth.state === "in" ? auth.session : null}
         onLogout={async () => {
@@ -63,7 +72,7 @@ export function App() {
           }
         }}
       />
-      <Container maxWidth="md" sx={{ py: 4 }}>
+      <Container maxWidth="md" sx={{ py: 4, flexGrow: 1 }}>
         <Routes>
           <Route
             path="/login"
@@ -94,6 +103,35 @@ export function App() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+      </Container>
+      <Footer />
+    </Box>
+  );
+}
+
+function Footer() {
+  return (
+    <Box component="footer" sx={{ borderTop: 1, borderColor: "divider", py: 3, mt: "auto" }}>
+      <Container maxWidth="md">
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1}
+          sx={{ alignItems: "center", justifyContent: "space-between" }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            © {new Date().getFullYear()} sshbin
+          </Typography>
+          <Link
+            href="https://github.com/RispyCZ/sshbin"
+            target="_blank"
+            rel="noopener"
+            variant="body2"
+            color="text.secondary"
+            underline="hover"
+          >
+            GitHub
+          </Link>
+        </Stack>
       </Container>
     </Box>
   );
