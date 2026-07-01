@@ -1,7 +1,10 @@
 Sshbin is filesharing software written golang to be portable and lightweight.
 
 # WebUI
-Use go templates and vanilla JS + CSS can use MDN MCP server when search docs.
+React 19 + TypeScript SPA (`internal/web/src`) using MUI, react-router, and a
+JSON API. Built with Vite+ (`vp`) and embedded into the Go binary via
+`go:embed`. Only the download error page is server-rendered (`templates/error.html`).
+See `architecture/web-ui.md`. Use MDN MCP server when searching web-platform docs.
 
 # Folder structure: 
 golang standard with internal and cmd

@@ -1,44 +1,94 @@
 # Web UI
 
-Simple, minimal interface for configuring and managing file shares.
+React single-page app for configuring and managing file shares, backed by a
+JSON API. The Go server owns auth, storage, and access control; the browser owns
+rendering and routing.
 
 ## Tech stack
 
-- **Go templates** (`html/template`) — server-rendered pages, embedded via `embed.FS`
-- **Lit** — lightweight web components for interactive elements (OTP input, user menu, toast, share modal)
-- **Vanilla CSS** — modern CSS (oklch colors, `color-mix`, nesting, `container-query`-ready); no framework
+- **React 19 + TypeScript** — SPA in `internal/web/src`, entry `src/main.tsx`
+- **MUI (Material UI) v9** with Emotion — component library and theming
+- **react-router v7** — client-side routing
+- **Vite+** (`vp`) — dev server (HMR) and production build
+- **Go** — JSON API, session/auth, file streaming; serves the SPA shell
 
-## Routes
+The built assets (`dist/`) are embedded into the binary via `//go:embed all:dist`
+(`spa.go`), so a single `sshbin` binary ships the whole UI.
+
+## Serving model
+
+- **`spa.go`** renders the SPA shell (`templates/spa.html`). In production it
+  reads the Vite manifest and injects hashed `dist/` asset URLs; in dev
+  (`Config.Dev`) it points at the Vite dev server (`ViteOrigin`) for HMR.
+- Any non-API path falls through to the shell, so client-side deep links
+  (e.g. `/shares`, `/s/{id}`) resolve.
+- **`error.html`** is the only server-rendered page — a standalone document for
+  binary download errors (share missing / expired / forbidden), where no SPA is
+  loaded.
+
+## Client routes
+
+| Path | Auth | Component | Description |
+|------|------|-----------|-------------|
+| `/` | — | `Landing` | Landing page with upload instructions |
+| `/login` | — | `Login` | Email + OTP login |
+| `/s/:id` | varies | `Setup` | Public share view / owner configuration |
+| `/shares` | session | `Shares` | My Shares dashboard |
+| `/profile` | session | `Profile` | Profile settings and data deletion |
+| `*` | — | — | Redirect to `/` |
+
+## JSON API
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `GET` | `/` | — | Landing page with upload instructions |
-| `GET` | `/login` | — | Email input for OTP login |
-| `POST` | `/login` | — | Send OTP code |
-| `POST` | `/verify` | — | Verify OTP, set session cookie |
-| `POST` | `/logout` | session | Clear session |
-| `GET` | `/shares` | session | My Shares dashboard |
+| `GET` | `/api/session` | — | Current session (`401` when signed out) |
+| `POST` | `/api/login` | — | Send OTP code |
+| `POST` | `/api/verify` | — | Verify OTP, set session cookie |
+| `POST` | `/api/logout` | session | Clear session |
+| `GET` | `/api/shares` | session | List the caller's shares |
+| `DELETE` | `/api/shares/{id}` | session + owner | Delete a share |
+| `POST` | `/api/setup/{id}` | session + owner | Save share settings |
+| `GET` | `/api/profile` | session | Read profile |
+| `PUT` | `/api/profile` | session | Save profile |
+| `DELETE` | `/api/profile` | session | Delete account and all data |
+| `GET` | `/api/s/{id}` | varies | Public share view state |
+| `POST` | `/api/s/{id}` | varies | Submit share password |
 | `GET` | `/shares/{id}/qr` | session | QR code PNG for a share |
-| `POST` | `/shares/{id}/delete` | session + owner | Delete a share |
-| `GET` | `/setup/{id}` | session + owner | Configure share settings |
-| `POST` | `/setup/{id}` | session + owner | Save share settings |
-| `GET` | `/s/{id}` | varies | View / download a share |
-| `POST` | `/s/{id}` | varies | Submit share password |
 | `GET` | `/s/{id}/download` | varies | Stream file download |
+| `GET` | `/static/` | — | Embedded favicons |
 
-## Web components
+The typed client lives in `src/api/client.ts`; error responses carry
+`{ error, code }` and surface as `ApiError`.
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `sb-otp` | `components/sb-otp.js` | Split-digit OTP input with auto-advance |
-| `sb-user-menu` | `components/sb-user-menu.js` | Avatar dropdown with My Shares link and sign out |
-| `sb-share-link` | `components/sb-share-link.js` | URL input with copy-to-clipboard |
-| `sb-share-modal` | `components/sb-share-modal.js` | Modal with QR code image and copy URL |
-| `sb-notice` | `components/sb-notice.js` | Inline success / error notice |
-| `sb-toast` | `components/sb-toast.js` | Ephemeral toast notifications |
+## Key components
+
+| Component | Purpose |
+|-----------|---------|
+| `App` | Router, auth bootstrap, header/footer shell |
+| `ColorModeProvider` | Light/dark theme state, persisted in `localStorage` |
+| `ThemeToggle` | Light/dark switch |
+| `NotifyProvider` / `useNotify` | Global snackbar notifications |
+| `useConfirm` | Promise-based confirmation dialog |
+| `SetupDialog` | Configure visibility, password, emails, expiry |
+| `ShareDialog` | Share link with QR code and copy-to-clipboard |
+| `UserMenu` | Avatar dropdown: My Shares, profile, sign out |
+| `Logo` | Theme-aware wordmark |
 
 ## Access control
 
-- **Public shares** — no session required; optional password checked via stateless HMAC cookie (`fd_pw_{id}`)
-- **Private shares** — session required; viewer's email must be in the owner's allowlist
-- **Setup / delete** — session required and email must match `owner_email` (first visitor claims an unconfigured share)
+- **Public shares** — no session required; optional password checked via a
+  stateless HMAC cookie (`fd_pw_{id}`)
+- **Private shares** — session required; the viewer's email must be in the
+  owner's allowlist
+- **Setup / delete** — session required and email must match `owner_email`
+  (first visitor claims an unconfigured share)
+
+## Development
+
+```
+vp install    # install deps
+vp dev        # Vite dev server (HMR); run sshbin with --dev to proxy to it
+vp build      # produce embedded dist/
+vp check      # format, lint, type check
+vp test       # run tests
+```
