@@ -90,5 +90,32 @@ vp install    # install deps
 vp dev        # Vite dev server (HMR); run sshbin with --dev to proxy to it
 vp build      # produce embedded dist/
 vp check      # format, lint, type check
-vp test       # run tests
 ```
+
+## Testing
+
+Two layers, run from `internal/web`:
+
+```
+vp run test       # unit + component (Vitest + jsdom)
+vp run test:watch # ...in watch mode
+vp run e2e        # end-to-end (Playwright + Chromium)
+vp run e2e:ui      # ...with the Playwright UI
+```
+
+**Unit + component** (`src/**/*.test.{ts,tsx}`): Vitest under a jsdom
+environment (`vite.config.ts` `test` block, setup in `src/test/setup.ts`).
+`src/api/client.test.ts` mocks `fetch`; `src/components/OtpInput.test.tsx`
+drives the component with `@testing-library/react` + `user-event`.
+
+`vp test` is currently broken — the published `vite-plus-test@0.1.24` ships no
+`vitest` bin for `vite-plus-core@0.2.1` to launch. The `test` scripts invoke the
+bundled runner directly via `node node_modules/vitest/vitest.mjs` (the stable
+path exists because `vitest` is a catalog devDependency). Revisit once vite-plus
+ships a matching test package.
+
+**E2E** (`e2e/*.spec.ts`, `playwright.config.ts`): the real SPA in Chromium with
+`/api/*` mocked by `e2e/api-mock.ts` (Playwright route interception) — no Go
+backend needed. Playwright's `webServer` runs `vp dev` on port 5199, served from
+the dev/test-only `index.html` (production still renders `templates/spa.html`;
+`vp build` inputs `src/main.tsx`, so `index.html` never reaches `dist/`).
