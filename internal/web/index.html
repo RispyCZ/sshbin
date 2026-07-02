@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  Dev/test-only SPA entry. In production the Go server renders templates/spa.html
+  and injects the hashed script; `vp build` uses src/main.tsx as its input and
+  never emits this file. Vite dev (`vp dev`) and Playwright E2E serve it so the
+  SPA can run standalone without the Go backend.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sshbin</title>
+    <meta name="sshbin-host" content="ssh.example.com" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

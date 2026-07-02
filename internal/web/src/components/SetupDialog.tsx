@@ -1,0 +1,139 @@
+import { useState } from "react";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
+  Radio,
+  RadioGroup,
+  Stack,
+  TextField,
+} from "@mui/material";
+import SaveIcon from "@mui/icons-material/Save";
+import { api, errMessage, type Expiry, type Share } from "../api/client.ts";
+import { useNotify } from "./NotifyProvider.tsx";
+
+export function SetupDialog({
+  share,
+  open,
+  onClose,
+  onSaved,
+}: {
+  share: Share;
+  open: boolean;
+  onClose: () => void;
+  onSaved: (updated: Share) => void;
+}) {
+  // The stored expiry timestamp can't be mapped back to a preset, so when
+  // editing default to "keep" (leave the current expiry untouched) and only
+  // change it if the owner picks a preset. New shares default to "never".
+  const [expires, setExpires] = useState<Expiry>(share.configured ? "keep" : "never");
+  const [visibility, setVisibility] = useState<"public" | "private">(
+    share.public ? "public" : "private",
+  );
+  const [emails, setEmails] = useState(share.allowedEmails.join("\n"));
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const notify = useNotify();
+
+  async function save() {
+    setBusy(true);
+    try {
+      const updated = await api.setupShare(share.id, {
+        expires,
+        visibility,
+        emails: emails
+          .split("\n")
+          .map((e) => e.trim())
+          .filter(Boolean),
+        password,
+      });
+      onSaved(updated);
+      onClose();
+    } catch (err) {
+      notify(errMessage(err, "Could not save settings."), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        {share.configured ? "Edit share" : "Set up share"} — {share.fileName}
+      </DialogTitle>
+      <DialogContent>
+        <Stack spacing={3} sx={{ pt: 1 }}>
+          <FormControl>
+            <FormLabel>Expiry</FormLabel>
+            <RadioGroup value={expires} onChange={(e) => setExpires(e.target.value as Expiry)}>
+              {share.configured && (
+                <FormControlLabel value="keep" control={<Radio />} label="Keep current" />
+              )}
+              <FormControlLabel value="1h" control={<Radio />} label="1 hour" />
+              <FormControlLabel value="24h" control={<Radio />} label="24 hours" />
+              <FormControlLabel value="168h" control={<Radio />} label="7 days" />
+              <FormControlLabel value="never" control={<Radio />} label="Never" />
+            </RadioGroup>
+          </FormControl>
+
+          <FormControl>
+            <FormLabel>Visibility</FormLabel>
+            <RadioGroup
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value as "public" | "private")}
+            >
+              <FormControlLabel
+                value="public"
+                control={<Radio />}
+                label="Public — anyone with the link"
+              />
+              <FormControlLabel
+                value="private"
+                control={<Radio />}
+                label="Private — only people I list"
+              />
+            </RadioGroup>
+            {visibility === "private" && (
+              <TextField
+                label="Allowed emails (one per line)"
+                multiline
+                rows={3}
+                value={emails}
+                onChange={(e) => setEmails(e.target.value)}
+                placeholder="alice@example.com"
+                fullWidth
+                sx={{ mt: 1 }}
+              />
+            )}
+          </FormControl>
+
+          <TextField
+            type="password"
+            label="Extra password (optional)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={share.hasPassword ? "leave blank to keep current" : "no password"}
+            autoComplete="new-password"
+            fullWidth
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          startIcon={<SaveIcon />}
+          onClick={() => void save()}
+          disabled={busy}
+        >
+          {busy ? "Saving…" : "Save settings"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/charmbracelet/log"
 	"net/url"
 	"strings"
 	"time"
@@ -58,57 +57,6 @@ func (h *handler) requireSession(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (h *handler) loginGet(w http.ResponseWriter, r *http.Request) {
-	h.render(w, r,http.StatusOK, "login", map[string]any{"Next": safeNext(r.URL.Query().Get("next"))})
-}
-
-func (h *handler) loginPost(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		h.render(w, r,http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
-		return
-	}
-	email := strings.TrimSpace(r.FormValue("email"))
-	next := safeNext(r.FormValue("next"))
-	if email == "" {
-		h.render(w, r,http.StatusBadRequest, "login", map[string]any{"Next": next, "Error": "Enter an email address."})
-		return
-	}
-	if err := h.auth.StartLogin(r.Context(), email); err != nil {
-		log.Error("start login", "err", err)
-		h.render(w, r,http.StatusInternalServerError, "error", errData(http.StatusInternalServerError, "Could not send a code."))
-		return
-	}
-	h.render(w, r,http.StatusOK, "verify", map[string]any{"Email": email, "MaskedEmail": maskEmail(email), "Next": next})
-}
-
-func (h *handler) verifyPost(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		h.render(w, r,http.StatusBadRequest, "error", errData(http.StatusBadRequest, "Invalid form submission."))
-		return
-	}
-	email := strings.TrimSpace(r.FormValue("email"))
-	code := strings.TrimSpace(r.FormValue("code"))
-	next := safeNext(r.FormValue("next"))
-
-	token, sess, err := h.auth.Verify(email, code)
-	if err != nil {
-		h.render(w, r,http.StatusUnauthorized, "verify", map[string]any{
-			"Email": email, "MaskedEmail": maskEmail(email), "Next": next, "Error": verifyError(err),
-		})
-		return
-	}
-	h.setSessionCookie(w, token, sess.ExpiresAt)
-	http.Redirect(w, r, next+"?flash=signed_in", http.StatusSeeOther)
-}
-
-func (h *handler) logout(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(sessionCookie); err == nil {
-		h.auth.Logout(c.Value)
-	}
-	h.clearSessionCookie(w)
-	http.Redirect(w, r, "/?flash=signed_out", http.StatusSeeOther)
-}
-
 func verifyError(err error) string {
 	switch {
 	case errors.Is(err, auth.ErrInvalidCode):
@@ -120,15 +68,6 @@ func verifyError(err error) string {
 	default:
 		return "Could not verify the code."
 	}
-}
-
-// safeNext returns a safe local redirect target, rejecting absolute or
-// protocol-relative URLs to prevent open redirects.
-func safeNext(next string) string {
-	if next == "" || !strings.HasPrefix(next, "/") || strings.HasPrefix(next, "//") {
-		return "/"
-	}
-	return next
 }
 
 func maskEmail(email string) string {

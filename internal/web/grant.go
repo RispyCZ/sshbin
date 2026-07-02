@@ -10,8 +10,11 @@ import (
 )
 
 // Password grants are stateless: a correct password sets a cookie holding an
-// HMAC of the share ID under the server secret. The cookie cannot be forged
-// without the secret, and is scoped (by path) to the one share.
+// HMAC of the share ID under the server secret. The cookie name is per-share
+// (fd_pw_<id>) and its value is keyed to that ID, so it cannot be forged and
+// only unlocks its own share. It is set at Path "/" so both the SPA's status
+// check (GET /api/s/<id>) and the download route (GET /s/<id>/download) receive
+// it — the two live under different path prefixes and share no prefix but "/".
 
 func grantCookieName(id string) string {
 	return "fd_pw_" + id
@@ -27,7 +30,7 @@ func (h *handler) setPasswordGrant(w http.ResponseWriter, id string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     grantCookieName(id),
 		Value:    h.grantValue(id),
-		Path:     "/s/" + id,
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   h.secureCookies,
 		SameSite: http.SameSiteLaxMode,
