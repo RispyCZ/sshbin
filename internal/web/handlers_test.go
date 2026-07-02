@@ -295,6 +295,35 @@ func TestDownload_ForgedGrantRejected(t *testing.T) {
 	}
 }
 
+func TestShareQR_OwnerOnly(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com", Configured: true})
+	h, sender := newTestHandler(t, repo)
+
+	// Non-owner gets 404 (no existence oracle, no QR minted).
+	nonOwner := httptest.NewRequest("GET", "/shares/abc/qr", nil)
+	nonOwner.SetPathValue("id", "abc")
+	nonOwner.AddCookie(login(t, h, sender, "intruder@example.com"))
+	nonOwnerRec := httptest.NewRecorder()
+	h.shareQR(nonOwnerRec, nonOwner)
+	if nonOwnerRec.Code != http.StatusNotFound {
+		t.Fatalf("non-owner status = %d, want 404", nonOwnerRec.Code)
+	}
+
+	// Owner gets the PNG.
+	owner := httptest.NewRequest("GET", "/shares/abc/qr", nil)
+	owner.SetPathValue("id", "abc")
+	owner.AddCookie(login(t, h, sender, "owner@example.com"))
+	ownerRec := httptest.NewRecorder()
+	h.shareQR(ownerRec, owner)
+	if ownerRec.Code != http.StatusOK {
+		t.Fatalf("owner status = %d, want 200", ownerRec.Code)
+	}
+	if ct := ownerRec.Header().Get("Content-Type"); ct != "image/png" {
+		t.Errorf("content-type = %q, want image/png", ct)
+	}
+}
+
 func TestContentDisposition(t *testing.T) {
 	if got := contentDisposition("../../etc/passwd"); !strings.Contains(got, "passwd") || strings.Contains(got, "/") {
 		t.Errorf("path not stripped: %q", got)

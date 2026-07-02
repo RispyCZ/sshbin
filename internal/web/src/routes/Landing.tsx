@@ -13,25 +13,25 @@ function sshHost(): string {
   return meta?.content?.trim() || window.location.hostname;
 }
 
-const steps = [
-  {
-    title: "Upload over SSH",
-    body: null,
-    command: `scp my-log-file.log ${sshHost()}:`,
-  },
-  {
-    title: "Configure",
-    body: "Open the setup link printed in your terminal to set expiry, a password, or access policy.",
-    command: null,
-  },
-  {
-    title: "Share",
-    body: "Send the link or QR code to anyone.",
-    command: null,
-  },
-];
-
 export function Landing() {
+  const steps = [
+    {
+      title: "Upload over SSH",
+      body: null,
+      command: `scp my-log-file.log ${sshHost()}:`,
+    },
+    {
+      title: "Configure",
+      body: "Open the setup link printed in your terminal to set expiry, a password, or access policy.",
+      command: null,
+    },
+    {
+      title: "Share",
+      body: "Send the link or QR code to anyone.",
+      command: null,
+    },
+  ];
+
   return (
     <Stack spacing={6} sx={{ py: { xs: 2, sm: 6 } }}>
       <Stack spacing={2} sx={{ alignItems: "flex-start" }}>

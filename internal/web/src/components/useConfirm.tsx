@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
   Dialog,
@@ -22,6 +22,12 @@ type Pending = ConfirmOptions & { resolve: (ok: boolean) => void };
 // `dialog` element the caller renders. Resolves true on confirm, false otherwise.
 export function useConfirm() {
   const [pending, setPending] = useState<Pending | null>(null);
+
+  // Resolve a still-open dialog as "cancelled" if the host unmounts, so an
+  // awaiting caller isn't left suspended forever.
+  const pendingRef = useRef<Pending | null>(null);
+  pendingRef.current = pending;
+  useEffect(() => () => pendingRef.current?.resolve(false), []);
 
   const confirm = useCallback(
     (opts: ConfirmOptions) => new Promise<boolean>((resolve) => setPending({ ...opts, resolve })),

@@ -35,7 +35,14 @@ type handler struct {
 
 func (h *handler) shareQR(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	if _, err := h.repo.Get(r.Context(), id); err != nil {
+	s, err := h.repo.Get(r.Context(), id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	// Owners only: the QR is a dashboard affordance for one's own shares. Reply
+	// 404 (not 403) for others so it can't be used as an existence oracle.
+	if sess, ok := h.currentSession(r); !ok || s.OwnerEmail != sess.Email {
 		http.NotFound(w, r)
 		return
 	}

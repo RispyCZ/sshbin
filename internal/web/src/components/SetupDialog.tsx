@@ -28,9 +28,10 @@ export function SetupDialog({
   onClose: () => void;
   onSaved: (updated: Share) => void;
 }) {
-  // The stored expiry timestamp can't be mapped back to its preset, so default
-  // to "never" when there is none and let a save re-apply a preset otherwise.
-  const [expires, setExpires] = useState<Expiry>("never");
+  // The stored expiry timestamp can't be mapped back to a preset, so when
+  // editing default to "keep" (leave the current expiry untouched) and only
+  // change it if the owner picks a preset. New shares default to "never".
+  const [expires, setExpires] = useState<Expiry>(share.configured ? "keep" : "never");
   const [visibility, setVisibility] = useState<"public" | "private">(
     share.public ? "public" : "private",
   );
@@ -70,6 +71,9 @@ export function SetupDialog({
           <FormControl>
             <FormLabel>Expiry</FormLabel>
             <RadioGroup value={expires} onChange={(e) => setExpires(e.target.value as Expiry)}>
+              {share.configured && (
+                <FormControlLabel value="keep" control={<Radio />} label="Keep current" />
+              )}
               <FormControlLabel value="1h" control={<Radio />} label="1 hour" />
               <FormControlLabel value="24h" control={<Radio />} label="24 hours" />
               <FormControlLabel value="168h" control={<Radio />} label="7 days" />

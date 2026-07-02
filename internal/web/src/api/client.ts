@@ -15,7 +15,8 @@ export interface Share {
   shareURL: string;
 }
 
-export type Expiry = "1h" | "24h" | "168h" | "never";
+// "keep" leaves an already-configured share's expiry untouched on edit.
+export type Expiry = "1h" | "24h" | "168h" | "never" | "keep";
 
 export interface SetupInput {
   expires: Expiry;
@@ -54,10 +55,12 @@ export function errMessage(err: unknown, fallback: string): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   const res = await fetch(path, {
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers,
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as {

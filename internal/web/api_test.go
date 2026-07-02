@@ -257,6 +257,53 @@ func TestAPISetup_PublicNever(t *testing.T) {
 	}
 }
 
+func TestAPISetup_KeepPreservesExpiry(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	future := time.Now().Add(24 * time.Hour)
+	repo.Create(context.Background(), sharing.Sharing{
+		ID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com",
+		Configured: true, Public: true, ExpiresAt: &future, CreatedAt: time.Now(),
+	})
+	h, sender := newTestHandler(t, repo)
+
+	req := httptest.NewRequest("POST", "/api/setup/abc", strings.NewReader(`{"expires":"keep","visibility":"private"}`))
+	req.SetPathValue("id", "abc")
+	req.AddCookie(login(t, h, sender, "owner@example.com"))
+	rec := httptest.NewRecorder()
+
+	h.apiSetup(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	got, _ := repo.Get(context.Background(), "abc")
+	if got.ExpiresAt == nil || !got.ExpiresAt.Equal(future) {
+		t.Errorf("keep should preserve expiry, got %v want %v", got.ExpiresAt, future)
+	}
+	if got.Public {
+		t.Error("visibility change to private not applied")
+	}
+}
+
+func TestAPISetup_UnknownVisibilityStaysPrivate(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", CreatedAt: time.Now()})
+	h, sender := newTestHandler(t, repo)
+
+	req := httptest.NewRequest("POST", "/api/setup/abc", strings.NewReader(`{"expires":"never"}`))
+	req.SetPathValue("id", "abc")
+	req.AddCookie(login(t, h, sender, "owner@example.com"))
+	rec := httptest.NewRecorder()
+
+	h.apiSetup(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	got, _ := repo.Get(context.Background(), "abc")
+	if got.Public {
+		t.Error("omitted visibility should default to private (fail closed)")
+	}
+}
+
 func TestAPISetup_ForbiddenNonOwner(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
 	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com", Configured: true})

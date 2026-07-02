@@ -5,6 +5,7 @@ import SendIcon from "@mui/icons-material/Send";
 import { api, errMessage } from "../api/client.ts";
 import { Logo } from "../components/Logo.tsx";
 import { useNotify } from "../components/NotifyProvider.tsx";
+import { OtpInput } from "../components/OtpInput.tsx";
 
 export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
   const notify = useNotify();
@@ -28,11 +29,13 @@ export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
     }
   }
 
-  async function submitCode(e: React.FormEvent) {
-    e.preventDefault();
+  async function verify(value: string) {
+    // Guard against a double submit when auto-complete and the manual button
+    // (or a repeated onComplete) race.
+    if (busy) return;
     setBusy(true);
     try {
-      await api.verify(email.trim(), code.trim());
+      await api.verify(email.trim(), value.trim());
       notify("Signed in");
       await onAuthed();
     } catch (err) {
@@ -40,6 +43,11 @@ export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  function submitCode(e: React.FormEvent) {
+    e.preventDefault();
+    void verify(code);
   }
 
   return (
@@ -77,18 +85,30 @@ export function Login({ onAuthed }: { onAuthed: () => Promise<void> }) {
               <Typography variant="body2" color="text.secondary">
                 Sent to {masked}.
               </Typography>
-              <TextField
-                label="Code"
-                placeholder="123456"
-                slotProps={{ htmlInput: { inputMode: "numeric" } }}
+              <OtpInput
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                required
+                onChange={setCode}
+                onComplete={(c) => void verify(c)}
+                disabled={busy}
                 autoFocus
-                fullWidth
               />
-              <Button type="submit" variant="contained" disabled={busy} startIcon={<LoginIcon />}>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={busy || code.length < 6}
+                startIcon={<LoginIcon />}
+              >
                 {busy ? "Verifying…" : "Verify"}
+              </Button>
+              <Button
+                variant="text"
+                disabled={busy}
+                onClick={() => {
+                  setCode("");
+                  setStep("email");
+                }}
+              >
+                Use a different email
               </Button>
             </Stack>
           )}

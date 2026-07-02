@@ -10,7 +10,7 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import { ApiError, api, errMessage, type Session } from "../api/client.ts";
+import { api, errMessage, type Session } from "../api/client.ts";
 import { Landing } from "../routes/Landing.tsx";
 import { Login } from "../routes/Login.tsx";
 import { Profile } from "../routes/Profile.tsx";
@@ -24,7 +24,7 @@ import { UserMenu } from "./UserMenu.tsx";
 type Auth = { state: "loading" } | { state: "out" } | { state: "in"; session: Session };
 
 // safeNext returns the post-login redirect target, rejecting absolute or
-// protocol-relative URLs to prevent open redirects (mirrors the server).
+// protocol-relative URLs to prevent open redirects.
 function safeNext(): string {
   const next = new URLSearchParams(window.location.search).get("next");
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/shares";
@@ -38,12 +38,11 @@ export function App() {
     try {
       const session = await api.session();
       setAuth({ state: "in", session });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setAuth({ state: "out" });
-        return;
-      }
-      throw err;
+    } catch {
+      // Any failure — 401 (the normal signed-out case), a network error, or a
+      // 5xx — leaves the app usable in the signed-out state rather than stuck on
+      // the loading spinner forever. The next action re-checks the session.
+      setAuth({ state: "out" });
     }
   }, []);
 
@@ -163,7 +162,8 @@ function Header({ session, onLogout }: { session: Session | null; onLogout: () =
 function RequireAuth({ authed, children }: { authed: boolean; children: React.ReactNode }) {
   const location = useLocation();
   if (!authed) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const next = encodeURIComponent(location.pathname + location.search);
+    return <Navigate to={`/login?next=${next}`} replace />;
   }
   return <>{children}</>;
 }

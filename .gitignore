@@ -18,7 +18,6 @@ host_key.pub
 
 # Local test artifacts
 /myfile.log
-/localhost
 
 # Go
 *.test

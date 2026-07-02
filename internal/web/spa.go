@@ -114,13 +114,18 @@ func readEntry(sub fs.FS) (viteChunk, error) {
 func (s *spaServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// In prod, serve a real built file when one exists; otherwise fall back to
 	// the shell so client-side routes (e.g. /shares) resolve on deep links.
+	// Skip dotfiles (e.g. .vite/manifest.json) and directories so the embedded
+	// build's internal metadata and file listings aren't exposed.
 	if s.assets != nil {
 		name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
-		if name != "" {
+		if name != "" && !strings.HasPrefix(name, ".") && !strings.Contains(name, "/.") {
 			if f, err := s.assets.Open(name); err == nil {
+				info, statErr := f.Stat()
 				f.Close()
-				s.files.ServeHTTP(w, r)
-				return
+				if statErr == nil && !info.IsDir() {
+					s.files.ServeHTTP(w, r)
+					return
+				}
 			}
 		}
 	}

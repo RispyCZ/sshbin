@@ -59,6 +59,22 @@ func TestSPA_ProdServesHashedAsset(t *testing.T) {
 	}
 }
 
+func TestSPA_ProdBlocksInternalPaths(t *testing.T) {
+	s, _ := newSPA(false, "", "example.com")
+	// Dotfiles (build metadata) and directories must not be served from the
+	// embedded build; they fall back to the SPA shell instead.
+	for _, p := range []string{"/.vite/manifest.json", "/.vite/", "/assets/"} {
+		rec := httptest.NewRecorder()
+		s.ServeHTTP(rec, httptest.NewRequest("GET", p, nil))
+		if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+			t.Errorf("%s served as %q, want shell fallback", p, ct)
+		}
+		if !strings.Contains(rec.Body.String(), `<div id="root">`) {
+			t.Errorf("%s did not fall back to the shell", p)
+		}
+	}
+}
+
 func TestSPA_DevPointsAtViteServer(t *testing.T) {
 	s, err := newSPA(true, "http://localhost:5173", "ssh.example.com")
 	if err != nil {

@@ -302,8 +302,14 @@ func (h *handler) apiSetup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.OwnerEmail = sess.Email
-	s.ExpiresAt = parseExpiry(in.Expires, time.Now())
-	s.Public = in.Visibility != "private"
+	// "keep" preserves the existing expiry so editing other fields (visibility,
+	// password) doesn't silently make a time-limited share permanent.
+	if in.Expires != "keep" {
+		s.ExpiresAt = parseExpiry(in.Expires, time.Now())
+	}
+	// Fail closed: only an explicit "public" opens the share; an omitted or
+	// unrecognized value stays private rather than leaking the file.
+	s.Public = in.Visibility == "public"
 	s.AllowedEmails = nil
 	if !s.Public {
 		s.AllowedEmails = sharing.ParseEmails(strings.Join(in.Emails, "\n"))
