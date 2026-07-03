@@ -11,10 +11,10 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rispycz/sshbin/internal/auth"
+	"github.com/rispycz/sshbin/internal/httpserver"
 	"github.com/rispycz/sshbin/internal/sftp"
 	"github.com/rispycz/sshbin/internal/sqlstore"
 	"github.com/rispycz/sshbin/internal/storage"
-	"github.com/rispycz/sshbin/internal/web"
 )
 
 func main() {
@@ -81,7 +81,7 @@ func main() {
 	}
 	authMgr := auth.NewManager(sender, db.Sessions(), auth.Options{})
 
-	webSrv := web.New(web.Config{
+	webSrv := httpserver.New(httpserver.Config{
 		ListenAddr: *webAddr,
 		BaseURL:    *baseURL,
 		Secret:     secret,

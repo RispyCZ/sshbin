@@ -1,8 +1,7 @@
-package web
+package httpserver
 
 import (
 	"bytes"
-	"embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -10,10 +9,9 @@ import (
 	"net/http"
 	"path"
 	"strings"
-)
 
-//go:embed all:dist
-var distFS embed.FS
+	"github.com/rispycz/sshbin/web"
+)
 
 // spaServer serves the React single-page app. In dev it emits a shell that
 // loads modules from the Vite dev server (HMR); in prod it reads the embedded
@@ -64,7 +62,7 @@ func newSPA(dev bool, viteOrigin, host string) (*spaServer, error) {
 		return &spaServer{shell: shell}, nil
 	}
 
-	sub, err := fs.Sub(distFS, "dist")
+	sub, err := web.DistFS()
 	if err != nil {
 		return nil, err
 	}

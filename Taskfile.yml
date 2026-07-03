@@ -22,8 +22,16 @@ tasks:
       - go build -o {{.DEV_BIN}} {{.MAIN_PATH}}
       - exec {{.DEV_BIN}} --dev --storage s3://sshbin --smtp-host localhost -smtp-port 1025 --smtp-from noreply@sshbin.com -smtp-insecure
 
+  web-build:
+    desc: Build the React SPA
+    dir: web
+    cmds:
+      - vp install
+      - vp build
+
   build:
     desc: Build binary
+    deps: [web-build]
     cmds:
       - '{{.GO}} build -o bin/{{.BINARY_NAME}} {{.MAIN_PATH}}'
 

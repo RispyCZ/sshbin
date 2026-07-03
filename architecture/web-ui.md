@@ -6,7 +6,7 @@ rendering and routing.
 
 ## Tech stack
 
-- **React 19 + TypeScript** — SPA in `internal/web/src`, entry `src/main.tsx`
+- **React 19 + TypeScript** — SPA in `web/src`, entry `src/main.tsx`
 - **MUI (Material UI) v9** with Emotion — component library and theming
 - **react-router v7** — client-side routing
 - **Vite+** (`vp`) — dev server (HMR) and production build
@@ -94,7 +94,7 @@ vp check      # format, lint, type check
 
 ## Testing
 
-Two layers, run from `internal/web`:
+Two layers, run from `web`:
 
 ```
 vp run test       # unit + component (Vitest + jsdom)
