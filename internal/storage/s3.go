@@ -11,10 +11,9 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
-	v4signer "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/smithy-go/middleware"
 )
 
 // S3Storage stores files in an S3-compatible bucket.
@@ -38,7 +37,7 @@ func newS3Storage(ctx context.Context, u *url.URL) (*S3Storage, error) {
 	_, customEndpoint := os.LookupEnv("AWS_ENDPOINT_URL")
 	return &S3Storage{
 		client: s3.NewFromConfig(cfg, func(o *s3.Options) {
-			// Custom endpoints (S3Mock, R2) require path-style addressing;
+			// Custom endpoints (RustFS, R2, MinIO) require path-style addressing;
 			// virtual-hosted style only works when DNS resolves the bucket subdomain.
 			o.UsePathStyle = customEndpoint
 		}),
@@ -54,27 +53,19 @@ func (s *S3Storage) objectKey(id, name string) string {
 	return s.prefix + "/" + id + "/" + name
 }
 
-// unsignedPayload swaps the dynamic TLS-aware payload signing middleware with
-// UnsignedPayload so PutObject works over plain HTTP (e.g. local S3Mock) where
-// the SDK would otherwise attempt to SHA256-hash the unseekable pipe body.
-// UnsignedPayload is accepted by S3 and S3-compatible stores on both HTTP and HTTPS.
-func unsignedPayload(stack *middleware.Stack) error {
-	_, err := stack.Finalize.Swap("ComputePayloadHash", &v4signer.UnsignedPayload{})
-	return err
-}
-
 func (s *S3Storage) Create(ctx context.Context, id, name string) (io.WriteCloser, error) {
 	pr, pw := io.Pipe()
 	key := s.objectKey(id, name)
 	errCh := make(chan error, 1)
 	go func() {
-		_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+		// manager.Uploader splits the unknown-length pipe into buffered
+		// multipart parts, each sent with a Content-Length. This satisfies
+		// stores that reject chunked/unsigned streaming uploads (e.g. RustFS
+		// returns 411 MissingContentLength) without any payload-signing hacks.
+		_, err := manager.NewUploader(s.client).Upload(ctx, &s3.PutObjectInput{
 			Bucket: aws.String(s.bucket),
 			Key:    aws.String(key),
 			Body:   pr,
-		}, func(o *s3.Options) {
-			o.APIOptions = append(o.APIOptions, unsignedPayload)
-			o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
 		})
 		pr.CloseWithError(err)
 		errCh <- err

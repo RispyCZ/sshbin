@@ -2,9 +2,9 @@ BINARY_NAME=sshbin
 MAIN_PATH=./cmd/sshbin
 GO=go
 DEV_BIN=/tmp/sshbin-dev
-export AWS_ENDPOINT_URL=http://localhost:9090
-export AWS_ACCESS_KEY_ID=dev
-export AWS_SECRET_ACCESS_KEY=dev
+export AWS_ENDPOINT_URL=http://localhost:9001
+export AWS_ACCESS_KEY_ID=rustfsadmin
+export AWS_SECRET_ACCESS_KEY=rustfsadmin
 export AWS_REGION=us-east-1
 
 dev:
