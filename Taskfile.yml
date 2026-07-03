@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  BINARY_NAME: sshbin
+  MAIN_PATH: ./cmd/sshbin
+  GO: go
+  DEV_BIN: /tmp/sshbin-dev
+
+env:
+  AWS_ENDPOINT_URL: http://localhost:9001
+  AWS_ACCESS_KEY_ID: rustfsadmin
+  AWS_SECRET_ACCESS_KEY: rustfsadmin
+  AWS_REGION: us-east-1
+
+tasks:
+  dev:
+    watch: true
+    desc: Hot-reload dev server
+    cmds:
+      - go build -o {{.DEV_BIN}} {{.MAIN_PATH}}
+      - exec {{.DEV_BIN}} --dev --storage s3://sshbin
+
+  build:
+    desc: Build binary
+    cmds:
+      - '{{.GO}} build -o bin/{{.BINARY_NAME}} {{.MAIN_PATH}}'
+
+  run:
+    desc: Run app
+    cmds:
+      - '{{.GO}} run {{.MAIN_PATH}}'
+
+  test:
+    desc: Run tests
+    cmds:
+      - '{{.GO}} test ./...'
+
+  test-coverage:
+    desc: Run tests with coverage
+    cmds:
+      - '{{.GO}} test -cover ./...'
+
+  fmt:
+    desc: Format code
+    cmds:
+      - '{{.GO}} fmt ./...'
+
+  vet:
+    desc: Vet code
+    cmds:
+      - '{{.GO}} vet ./...'
+
+  deps:
+    desc: Download and tidy deps
+    cmds:
+      - '{{.GO}} mod download'
+      - '{{.GO}} mod tidy'
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - '{{.GO}} clean'
+      - rm -rf bin/
