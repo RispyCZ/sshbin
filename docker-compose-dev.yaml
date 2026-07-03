@@ -1,4 +1,11 @@
 services:
+  mailpit:
+    container_name: sshbin-mailpit
+    image: axllent/mailpit
+    command: ["--smtp-tls-cert", sans:localhost", "--smtp-tls-key", sans:localhost"]
+    ports:
+      - "1025:1025/tcp"
+      - "8025:8025/tcp"
   s3:
     container_name: sshbin-s3
     image: rustfs/rustfs:1.0.0-beta.8
