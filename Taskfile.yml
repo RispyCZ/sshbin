@@ -20,7 +20,7 @@ tasks:
     desc: Hot-reload dev server
     cmds:
       - go build -o {{.DEV_BIN}} {{.MAIN_PATH}}
-      - exec {{.DEV_BIN}} --dev --storage s3://sshbin
+      - exec {{.DEV_BIN}} --dev --storage s3://sshbin --smtp-host localhost -smtp-port 1025 --smtp-from noreply@sshbin.com -smtp-insecure
 
   build:
     desc: Build binary

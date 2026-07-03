@@ -18,6 +18,7 @@ require (
 	github.com/muesli/termenv v0.16.0
 	github.com/pkg/sftp v1.13.10
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
+	github.com/wneessen/go-mail v0.7.3
 	golang.org/x/crypto v0.53.0
 	golang.org/x/sync v0.21.0
 	modernc.org/sqlite v1.53.0

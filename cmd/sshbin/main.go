@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -25,6 +26,11 @@ func main() {
 	dsn := flag.String("db", "sqlite://sshbin.db", "database DSN (e.g. sqlite://sshbin.db)")
 	dev := flag.Bool("dev", false, "serve the SPA from the Vite dev server for HMR (run `vp dev` alongside)")
 	viteOrigin := flag.String("vite-origin", "http://localhost:5173", "Vite dev server URL used with -dev")
+	smtpHost := flag.String("smtp-host", "", "SMTP host for delivering login codes (empty logs codes instead)")
+	smtpPort := flag.Int("smtp-port", 587, "SMTP port (465 uses implicit TLS, otherwise STARTTLS)")
+	smtpUser := flag.String("smtp-user", "", "SMTP username (password read from SMTP_PASSWORD)")
+	smtpFrom := flag.String("smtp-from", "", "From address for login-code emails")
+	smtpInsecure := flag.Bool("smtp-insecure", false, "skip SMTP TLS certificate verification (dev only, allows self-signed)")
 	flag.Parse()
 
 	db, err := sqlstore.Open(*dsn)
@@ -53,8 +59,27 @@ func main() {
 		BaseURL:     *baseURL,
 	}, st, repo)
 
-	// LogSender prints OTP codes to the log; replace with SMTP/SMS in production.
-	authMgr := auth.NewManager(auth.LogSender{}, db.Sessions(), auth.Options{})
+	var sender auth.Sender
+	if *smtpHost != "" {
+		s, err := auth.NewSMTPSender(auth.SMTPConfig{
+			Host:               *smtpHost,
+			Port:               *smtpPort,
+			Username:           *smtpUser,
+			Password:           os.Getenv("SMTP_PASSWORD"),
+			From:               *smtpFrom,
+			InsecureSkipVerify: *smtpInsecure,
+		})
+		if err != nil {
+			log.Fatal("configure SMTP sender", "err", err)
+		}
+		sender = s
+		log.Info("auth: using SMTP sender", "host", *smtpHost, "port", *smtpPort)
+	} else {
+		// LogSender prints OTP codes to the log; never use in production.
+		sender = auth.LogSender{}
+		log.Warn("auth: no -smtp-host set, login codes are printed to the log (dev only)")
+	}
+	authMgr := auth.NewManager(sender, db.Sessions(), auth.Options{})
 
 	webSrv := web.New(web.Config{
 		ListenAddr: *webAddr,
