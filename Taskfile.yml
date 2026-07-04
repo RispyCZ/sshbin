@@ -33,8 +33,10 @@ tasks:
     desc: Build binary
     deps: [web-build]
     cmds:
-      - '{{.GO}} build -o bin/{{.BINARY_NAME}} {{.MAIN_PATH}}'
-
+      - 'env GOOS=linux GOARCH=amd64 {{.GO}} build -o bin/{{.BINARY_NAME}}-linux-amd64 {{.MAIN_PATH}}'
+      - 'env GOOS=linux GOARCH=arm64 {{.GO}} build -o bin/{{.BINARY_NAME}}-linux-arm64 {{.MAIN_PATH}}'
+      - 'env GOOS=darwin GOARCH=arm64 {{.GO}} build -o bin/{{.BINARY_NAME}}-darwin-arm64 {{.MAIN_PATH}}'
+      
   run:
     desc: Run app
     cmds:

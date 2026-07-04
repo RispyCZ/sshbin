@@ -1,0 +1,33 @@
+services:
+  app:
+    container_name: sshbin-app
+    build:
+      context: .
+      dockerfile: ./docker/sshbin/Dockerfile
+      args:
+        NODE_IMAGE: node:24-slim
+        GOLANG_IMAGE: golang:1.26.3
+        RUNTIME_IMAGE: gcr.io/distroless/static-debian13
+    working_dir: /data
+    env_file: .env
+    command: ["--base-url", "${SSHBIN_BASE_URL}"]
+    volumes:
+      - sshbin-data:/data
+  caddy:
+    container_name: sshbin-caddy
+    build:
+      context: .
+      dockerfile: ./docker/caddy/Dockerfile
+      args:
+        BUILDER_IMAGE: caddy:builder
+        RUNTIME_IMAGE: gcr.io/distroless/static-debian13
+    env_file: .env
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:2019:2019/tcp"
+      - "2022:2022/tcp"
+      - "443:443/tcp"
+      - "443:443/udp"
+volumes:
+  sshbin-data:
