@@ -30,16 +30,39 @@ go install github.com/rispycz/sshbin/cmd/sshbin@latest
 sshbin --base-url https://sshbin.example.com
 ```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--sftp-listen` | `:2022` | SFTP server listen address |
-| `--web-listen` | `:8080` | Web UI listen address |
-| `--base-url` | `http://localhost:8080` | Public URL used in share links and QR codes |
-| `--host-key` | `host_key` | Path to SSH host key (generated on first run if missing) |
-| `--storage` | `uploads` | Directory for uploaded files |
-| `--db` | `sqlite://sshbin.db` | Database DSN |
+### Configuration
 
-> **OTP email:** the default build logs OTP codes to stdout. Wire up an SMTP sender by replacing `auth.LogSender` in `cmd/sshbin/main.go`.
+Every flag can also be set via an environment variable named `SSHBIN_<FLAG>`,
+where the flag name is uppercased and `-` becomes `_` (e.g. `--sftp-listen` →
+`SSHBIN_SFTP_LISTEN`). Precedence: **flag > env var > default**. Env vars make
+container deployments easy; flags stay handy for the CLI.
+
+| Flag | Env var | Default | Description |
+|------|---------|---------|-------------|
+| `--sftp-listen` | `SSHBIN_SFTP_LISTEN` | `:2022` | SFTP server listen address |
+| `--web-listen` | `SSHBIN_WEB_LISTEN` | `:8080` | Web UI listen address |
+| `--base-url` | `SSHBIN_BASE_URL` | `http://localhost:8080` | Public URL used in share links and QR codes |
+| `--host-key` | `SSHBIN_HOST_KEY` | `host_key` | Path to SSH host key (generated on first run if missing) |
+| `--storage` | `SSHBIN_STORAGE` | `local://uploads` | Storage backend DSN (`local://path` or `s3://bucket/prefix`) |
+| `--db` | `SSHBIN_DB` | `sqlite://sshbin.db` | Database DSN |
+| `--dev` | `SSHBIN_DEV` | `false` | Serve the SPA from the Vite dev server for HMR |
+| `--vite-origin` | `SSHBIN_VITE_ORIGIN` | `http://localhost:5173` | Vite dev server URL (used with `--dev`) |
+| `--smtp-host` | `SSHBIN_SMTP_HOST` | _(empty)_ | SMTP host for login-code emails (empty → codes logged to stdout) |
+| `--smtp-port` | `SSHBIN_SMTP_PORT` | `587` | SMTP port (465 = implicit TLS, otherwise STARTTLS) |
+| `--smtp-user` | `SSHBIN_SMTP_USER` | _(empty)_ | SMTP username |
+| `--smtp-from` | `SSHBIN_SMTP_FROM` | _(empty)_ | From address for login-code emails |
+| `--smtp-insecure` | `SSHBIN_SMTP_INSECURE` | `false` | Skip SMTP TLS certificate verification (dev only) |
+
+**Secrets (env-only, no flag):**
+
+| Env var | Description |
+|---------|-------------|
+| `SSHBIN_SMTP_PASSWORD` | SMTP password for login-code delivery |
+| `AWS_ENDPOINT_URL` | Custom S3 endpoint (enables path-style addressing) for the `s3://` backend |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | AWS credentials for the `s3://` backend (standard AWS SDK chain) |
+
+> **OTP email:** without `--smtp-host` set, OTP login codes are printed to the
+> log (dev only). Set the SMTP options above to deliver them by email.
 
 ## Architecture
 
