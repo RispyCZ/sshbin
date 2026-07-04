@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -18,19 +17,21 @@ import (
 )
 
 func main() {
-	sftpAddr := flag.String("sftp-listen", ":2022", "SFTP listen address")
-	webAddr := flag.String("web-listen", ":8080", "web UI listen address")
-	hostKeyPath := flag.String("host-key", "host_key", "path to SSH host key (generated if missing)")
-	baseURL := flag.String("base-url", "http://localhost:8080", "base URL for setup and share links")
-	storageDSN := flag.String("storage", "local://uploads", "storage backend DSN (local://path or s3://bucket/prefix)")
-	dsn := flag.String("db", "sqlite://sshbin.db", "database DSN (e.g. sqlite://sshbin.db)")
-	dev := flag.Bool("dev", false, "serve the SPA from the Vite dev server for HMR (run `vp dev` alongside)")
-	viteOrigin := flag.String("vite-origin", "http://localhost:5173", "Vite dev server URL used with -dev")
-	smtpHost := flag.String("smtp-host", "", "SMTP host for delivering login codes (empty logs codes instead)")
-	smtpPort := flag.Int("smtp-port", 587, "SMTP port (465 uses implicit TLS, otherwise STARTTLS)")
-	smtpUser := flag.String("smtp-user", "", "SMTP username (password read from SMTP_PASSWORD)")
-	smtpFrom := flag.String("smtp-from", "", "From address for login-code emails")
-	smtpInsecure := flag.Bool("smtp-insecure", false, "skip SMTP TLS certificate verification (dev only, allows self-signed)")
+	// Every flag also reads SSHBIN_<NAME> (e.g. -sftp-listen -> SSHBIN_SFTP_LISTEN).
+	// Precedence: explicit flag > env var > default. See env.go.
+	sftpAddr := flagString("sftp-listen", ":2022", "SFTP listen address")
+	webAddr := flagString("web-listen", ":8080", "web UI listen address")
+	hostKeyPath := flagString("host-key", "host_key", "path to SSH host key (generated if missing)")
+	baseURL := flagString("base-url", "http://localhost:8080", "base URL for setup and share links")
+	storageDSN := flagString("storage", "local://uploads", "storage backend DSN (local://path or s3://bucket/prefix)")
+	dsn := flagString("db", "sqlite://sshbin.db", "database DSN (e.g. sqlite://sshbin.db)")
+	dev := flagBool("dev", false, "serve the SPA from the Vite dev server for HMR (run `vp dev` alongside)")
+	viteOrigin := flagString("vite-origin", "http://localhost:5173", "Vite dev server URL used with -dev")
+	smtpHost := flagString("smtp-host", "", "SMTP host for delivering login codes (empty logs codes instead)")
+	smtpPort := flagInt("smtp-port", 587, "SMTP port (465 uses implicit TLS, otherwise STARTTLS)")
+	smtpUser := flagString("smtp-user", "", "SMTP username (password read from SSHBIN_SMTP_PASSWORD)")
+	smtpFrom := flagString("smtp-from", "", "From address for login-code emails")
+	smtpInsecure := flagBool("smtp-insecure", false, "skip SMTP TLS certificate verification (dev only, allows self-signed)")
 	flag.Parse()
 
 	db, err := sqlstore.Open(*dsn)
@@ -65,7 +66,7 @@ func main() {
 			Host:               *smtpHost,
 			Port:               *smtpPort,
 			Username:           *smtpUser,
-			Password:           os.Getenv("SMTP_PASSWORD"),
+			Password:           smtpPassword(),
 			From:               *smtpFrom,
 			InsecureSkipVerify: *smtpInsecure,
 		})
