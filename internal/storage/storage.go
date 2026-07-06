@@ -7,9 +7,17 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"time"
 )
 
 var ErrNotFound = errors.New("file not found")
+
+// BlobInfo describes a stored blob as returned by Storage.List.
+type BlobInfo struct {
+	ID      string
+	Name    string
+	ModTime time.Time
+}
 
 // Storage persists uploaded files.
 type Storage interface {
@@ -17,6 +25,12 @@ type Storage interface {
 	// Open returns a readable, seekable handle to a stored file. It returns
 	// ErrNotFound when the file does not exist.
 	Open(ctx context.Context, id string, name string) (io.ReadSeekCloser, error)
+	// Delete removes a stored file. Deleting a file that does not exist is a
+	// no-op and returns no error, so pruning can run idempotently.
+	Delete(ctx context.Context, id string, name string) error
+	// List enumerates every stored blob. Used by the pruner to find blobs with
+	// no matching share record.
+	List(ctx context.Context) ([]BlobInfo, error)
 }
 
 // Open parses a storage DSN and returns the appropriate Storage implementation.

@@ -58,9 +58,9 @@ func (r *ShareRepo) Update(ctx context.Context, s sharing.Sharing) error {
 
 func (r *ShareRepo) Get(ctx context.Context, id string) (sharing.Sharing, error) {
 	var (
-		s         sharing.Sharing
-		createdAt int64
-		expiresAt sql.NullInt64
+		s                  sharing.Sharing
+		createdAt          int64
+		expiresAt          sql.NullInt64
 		configured, public int
 	)
 	err := r.db.QueryRowContext(ctx, r.dialect.Rebind(`
@@ -101,9 +101,9 @@ func (r *ShareRepo) ListByOwner(ctx context.Context, email string) ([]sharing.Sh
 	var shares []sharing.Sharing
 	for rows.Next() {
 		var (
-			s         sharing.Sharing
-			createdAt int64
-			expiresAt sql.NullInt64
+			s                  sharing.Sharing
+			createdAt          int64
+			expiresAt          sql.NullInt64
 			configured, public int
 		)
 		if err := rows.Scan(&s.ID, &s.FileID, &s.FileName, &createdAt, &configured, &s.OwnerEmail, &expiresAt, &s.PasswordHash, &public); err != nil {
@@ -129,6 +129,58 @@ func (r *ShareRepo) ListByOwner(ctx context.Context, email string) ([]sharing.Sh
 		shares[i].AllowedEmails = emails
 	}
 	return shares, nil
+}
+
+func (r *ShareRepo) Prunable(ctx context.Context, now, unconfiguredBefore time.Time) ([]sharing.Sharing, error) {
+	rows, err := r.db.QueryContext(ctx, r.dialect.Rebind(`
+		SELECT id, file_id, file_name, created_at, configured, owner_email, expires_at, password_hash, public
+		FROM shares
+		WHERE (expires_at IS NOT NULL AND expires_at < ?)
+			OR (configured = 0 AND created_at < ?)`), now.Unix(), unconfiguredBefore.Unix())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var shares []sharing.Sharing
+	for rows.Next() {
+		var (
+			s                  sharing.Sharing
+			createdAt          int64
+			expiresAt          sql.NullInt64
+			configured, public int
+		)
+		if err := rows.Scan(&s.ID, &s.FileID, &s.FileName, &createdAt, &configured, &s.OwnerEmail, &expiresAt, &s.PasswordHash, &public); err != nil {
+			return nil, err
+		}
+		s.CreatedAt = time.Unix(createdAt, 0).UTC()
+		s.Configured = configured != 0
+		s.Public = public != 0
+		if expiresAt.Valid {
+			t := time.Unix(expiresAt.Int64, 0).UTC()
+			s.ExpiresAt = &t
+		}
+		shares = append(shares, s)
+	}
+	return shares, rows.Err()
+}
+
+func (r *ShareRepo) FileIDs(ctx context.Context) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT file_id FROM shares`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 func (r *ShareRepo) Delete(ctx context.Context, id string) error {

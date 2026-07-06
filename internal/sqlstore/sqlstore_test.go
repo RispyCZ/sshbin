@@ -130,6 +130,67 @@ func TestShares_NilExpiry(t *testing.T) {
 	}
 }
 
+func TestShares_Prunable(t *testing.T) {
+	st := openTemp(t)
+	repo := st.Shares()
+	ctx := context.Background()
+	now := time.Now().Truncate(time.Second)
+
+	past := now.Add(-time.Hour)
+	future := now.Add(time.Hour)
+
+	// expired configured share -> prunable
+	repo.Create(ctx, sharing.Sharing{ID: "expired", FileID: "expired", FileName: "e.txt", CreatedAt: now.Add(-48 * time.Hour), Configured: true, ExpiresAt: &past})
+	// stale unconfigured upload -> prunable
+	repo.Create(ctx, sharing.Sharing{ID: "stale", FileID: "stale", FileName: "s.txt", CreatedAt: now.Add(-48 * time.Hour)})
+	// live configured, not expired -> keep
+	repo.Create(ctx, sharing.Sharing{ID: "live", FileID: "live", FileName: "l.txt", CreatedAt: now, Configured: true, ExpiresAt: &future})
+	// never-expiring configured -> keep
+	repo.Create(ctx, sharing.Sharing{ID: "forever", FileID: "forever", FileName: "f.txt", CreatedAt: now, Configured: true})
+	// fresh unconfigured upload -> keep (within window)
+	repo.Create(ctx, sharing.Sharing{ID: "fresh", FileID: "fresh", FileName: "n.txt", CreatedAt: now})
+
+	unconfiguredBefore := now.Add(-24 * time.Hour)
+	got, err := repo.Prunable(ctx, now, unconfiguredBefore)
+	if err != nil {
+		t.Fatalf("Prunable: %v", err)
+	}
+	ids := map[string]bool{}
+	for _, s := range got {
+		ids[s.ID] = true
+	}
+	if !ids["expired"] || !ids["stale"] {
+		t.Errorf("Prunable missing expired/stale: %v", ids)
+	}
+	if ids["live"] || ids["forever"] || ids["fresh"] {
+		t.Errorf("Prunable included a live share: %v", ids)
+	}
+	if len(got) != 2 {
+		t.Errorf("Prunable returned %d, want 2", len(got))
+	}
+}
+
+func TestShares_FileIDs(t *testing.T) {
+	st := openTemp(t)
+	repo := st.Shares()
+	ctx := context.Background()
+
+	repo.Create(ctx, sharing.Sharing{ID: "a", FileID: "fa", FileName: "a.txt", CreatedAt: time.Now()})
+	repo.Create(ctx, sharing.Sharing{ID: "b", FileID: "fb", FileName: "b.txt", CreatedAt: time.Now()})
+
+	ids, err := repo.FileIDs(ctx)
+	if err != nil {
+		t.Fatalf("FileIDs: %v", err)
+	}
+	set := map[string]bool{}
+	for _, id := range ids {
+		set[id] = true
+	}
+	if !set["fa"] || !set["fb"] || len(ids) != 2 {
+		t.Errorf("FileIDs = %v, want fa,fb", ids)
+	}
+}
+
 func TestSessions_Lifecycle(t *testing.T) {
 	st := openTemp(t)
 	store := st.Sessions()

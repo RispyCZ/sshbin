@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 )
@@ -60,6 +61,21 @@ func envDefaultBool(flagName string, def bool) bool {
 	return b
 }
 
+// envDefaultDuration behaves like envDefaultString but parses the env value as a
+// Go duration (e.g. "1h", "72h"). A malformed value is fatal.
+func envDefaultDuration(flagName string, def time.Duration) time.Duration {
+	v, ok := lookupEnv(envName(flagName))
+	if !ok {
+		return def
+	}
+	d, err := time.ParseDuration(strings.TrimSpace(v))
+	if err != nil {
+		fatalf("invalid duration env var", "var", envName(flagName), "value", v, "err", err)
+		return def
+	}
+	return d
+}
+
 // smtpPassword resolves the SMTP password from SSHBIN_SMTP_PASSWORD. It is a
 // secret with no flag counterpart.
 func smtpPassword() string {
@@ -81,4 +97,9 @@ func flagInt(name string, def int, usage string) *int {
 // flagBool registers a bool flag whose default falls back to SSHBIN_<NAME>.
 func flagBool(name string, def bool, usage string) *bool {
 	return flag.Bool(name, envDefaultBool(name, def), usage)
+}
+
+// flagDuration registers a duration flag whose default falls back to SSHBIN_<NAME>.
+func flagDuration(name string, def time.Duration, usage string) *time.Duration {
+	return flag.Duration(name, envDefaultDuration(name, def), usage)
 }
