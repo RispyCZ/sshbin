@@ -32,6 +32,7 @@ func main() {
 	smtpUser := flagString("smtp-user", "", "SMTP username (password read from SSHBIN_SMTP_PASSWORD)")
 	smtpFrom := flagString("smtp-from", "", "From address for login-code emails")
 	smtpInsecure := flagBool("smtp-insecure", false, "skip SMTP TLS certificate verification (dev only, allows self-signed)")
+	allowAnon := flagBool("allow-anonymous", false, "allow SFTP uploads from unrecognized/anonymous SSH keys (registered keys always allowed)")
 	flag.Parse()
 
 	db, err := sqlstore.Open(*dsn)
@@ -55,10 +56,11 @@ func main() {
 	repo := db.Shares()
 
 	sftpSrv := sftp.New(sftp.Config{
-		ListenAddr:  *sftpAddr,
-		HostKeyPath: *hostKeyPath,
-		BaseURL:     *baseURL,
-	}, st, repo)
+		ListenAddr:     *sftpAddr,
+		HostKeyPath:    *hostKeyPath,
+		BaseURL:        *baseURL,
+		AllowAnonymous: *allowAnon,
+	}, st, repo, db.SSHKeys())
 
 	var sender auth.Sender
 	if *smtpHost != "" {
@@ -88,7 +90,7 @@ func main() {
 		Secret:     secret,
 		Dev:        *dev,
 		ViteOrigin: *viteOrigin,
-	}, repo, st, authMgr, db.UserPrefs())
+	}, repo, st, authMgr, db.UserPrefs(), db.SSHKeys())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

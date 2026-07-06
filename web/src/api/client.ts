@@ -30,6 +30,14 @@ export interface Profile {
   defaultPublic: boolean;
 }
 
+export interface SSHKey {
+  id: string;
+  title: string;
+  fingerprint: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
 export interface ShareView {
   fileName: string;
   requiresPassword: boolean;
@@ -100,6 +108,13 @@ export const api = {
       body: JSON.stringify({ defaultPublic }),
     }),
   deleteAllData: () => request<void>("/api/profile", { method: "DELETE" }),
+  keys: () => request<SSHKey[]>("/api/keys"),
+  addKey: (title: string, key: string) =>
+    request<SSHKey>("/api/keys", {
+      method: "POST",
+      body: JSON.stringify({ title, key }),
+    }),
+  deleteKey: (id: string) => request<void>(`/api/keys/${id}`, { method: "DELETE" }),
   shareView: (id: string) => request<ShareView>(`/api/s/${id}`),
   unlockShare: (id: string, password: string) =>
     request<{ unlocked: boolean; downloadURL: string }>(`/api/s/${id}`, {

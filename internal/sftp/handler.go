@@ -18,10 +18,11 @@ import (
 )
 
 type uploadOnlyHandler struct {
-	storage storage.Storage
-	repo    sharing.Repository
-	baseURL string
-	stderr  io.Writer
+	storage    storage.Storage
+	repo       sharing.Repository
+	baseURL    string
+	stderr     io.Writer
+	ownerEmail string // set when the uploader authenticated with a registered key
 }
 
 // -- FilePut --
@@ -54,10 +55,11 @@ func (f *uploadFile) Close() error {
 	}
 	ctx := context.Background()
 	s := sharing.Sharing{
-		ID:        f.id,
-		FileID:    f.id,
-		FileName:  f.name,
-		CreatedAt: time.Now(),
+		ID:         f.id,
+		FileID:     f.id,
+		FileName:   f.name,
+		CreatedAt:  time.Now(),
+		OwnerEmail: f.handler.ownerEmail,
 	}
 	if err := f.handler.repo.Create(ctx, s); err != nil {
 		return err
@@ -142,8 +144,8 @@ func (s singleStat) ListAt(ls []os.FileInfo, offset int64) (int, error) {
 	return 1, io.EOF
 }
 
-func Handlers(st storage.Storage, repo sharing.Repository, baseURL string, stderr io.Writer) sftp.Handlers {
-	h := &uploadOnlyHandler{storage: st, repo: repo, baseURL: baseURL, stderr: stderr}
+func Handlers(st storage.Storage, repo sharing.Repository, baseURL string, stderr io.Writer, ownerEmail string) sftp.Handlers {
+	h := &uploadOnlyHandler{storage: st, repo: repo, baseURL: baseURL, stderr: stderr, ownerEmail: ownerEmail}
 	return sftp.Handlers{
 		FileGet:  h,
 		FilePut:  h,

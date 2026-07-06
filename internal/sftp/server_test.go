@@ -2,6 +2,7 @@ package sftp_test
 
 import (
 	"context"
+	"crypto/ed25519"
 	"io"
 	"net"
 	"os"
@@ -14,22 +15,52 @@ import (
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/rispycz/sshbin/internal/sharing"
 	sftpd "github.com/rispycz/sshbin/internal/sftp"
+	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sshkeys"
 	"github.com/rispycz/sshbin/internal/storage"
 )
 
+// newSigner returns a fresh ed25519 SSH signer for use as a client identity.
+func newSigner(t *testing.T) ssh.Signer {
+	t.Helper()
+	_, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	signer, err := ssh.NewSignerFromKey(priv)
+	if err != nil {
+		t.Fatalf("signer: %v", err)
+	}
+	return signer
+}
+
+// registerKey adds a signer's public key to the repo owned by email.
+func registerKey(t *testing.T, keys *sshkeys.MemoryRepository, signer ssh.Signer, email string) {
+	t.Helper()
+	pub := signer.PublicKey()
+	if err := keys.Add(context.Background(), sshkeys.PublicKey{
+		ID:            "k-" + email,
+		Email:         email,
+		Fingerprint:   ssh.FingerprintSHA256(pub),
+		AuthorizedKey: sshkeys.Canonical(pub),
+		CreatedAt:     time.Now(),
+	}); err != nil {
+		t.Fatalf("register key: %v", err)
+	}
+}
+
 func startServer(t *testing.T, storageDir string) (addr string, repo *sharing.MemoryRepository) {
+	addr, repo, _ = startServerWith(t, storageDir, sshkeys.NewMemoryRepository(), true)
+	return addr, repo
+}
+
+func startServerWith(t *testing.T, storageDir string, keys sftpd.KeyAuthenticator, allowAnon bool) (addr string, repo *sharing.MemoryRepository, keysOut sftpd.KeyAuthenticator) {
 	t.Helper()
 	repo = sharing.NewMemoryRepository()
 	st := &storage.LocalStorage{BaseDir: storageDir}
 
 	keyPath := filepath.Join(t.TempDir(), "host_key")
-	cfg := sftpd.Config{
-		ListenAddr:  "127.0.0.1:0",
-		HostKeyPath: keyPath,
-		BaseURL:     "http://localhost:8080",
-	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -38,8 +69,13 @@ func startServer(t *testing.T, storageDir string) (addr string, repo *sharing.Me
 	addr = ln.Addr().String()
 	ln.Close()
 
-	cfg.ListenAddr = addr
-	srv := sftpd.New(cfg, st, repo)
+	cfg := sftpd.Config{
+		ListenAddr:     addr,
+		HostKeyPath:    keyPath,
+		BaseURL:        "http://localhost:8080",
+		AllowAnonymous: allowAnon,
+	}
+	srv := sftpd.New(cfg, st, repo, keys)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -51,13 +87,18 @@ func startServer(t *testing.T, storageDir string) (addr string, repo *sharing.Me
 	}()
 	<-ready
 	time.Sleep(20 * time.Millisecond) // let listener bind
-	return addr, repo
+	return addr, repo, keys
 }
 
 func sftpClient(t *testing.T, addr string) *sftp.Client {
+	return sftpClientKey(t, addr, newSigner(t))
+}
+
+func sftpClientKey(t *testing.T, addr string, signer ssh.Signer) *sftp.Client {
 	t.Helper()
 	clientCfg := &ssh.ClientConfig{
 		User:            "anon",
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	conn, err := ssh.Dial("tcp", addr, clientCfg)
@@ -234,18 +275,18 @@ func TestUpload_StorageError(t *testing.T) {
 
 	st := &storage.LocalStorage{BaseDir: roDir}
 	keyPath := filepath.Join(t.TempDir(), "host_key")
-	cfg := sftpd.Config{
-		ListenAddr:  "127.0.0.1:0",
-		HostKeyPath: keyPath,
-		BaseURL:     "http://localhost:8080",
-	}
 
 	ln, _ := net.Listen("tcp", "127.0.0.1:0")
 	addr := ln.Addr().String()
 	ln.Close()
-	cfg.ListenAddr = addr
+	cfg := sftpd.Config{
+		ListenAddr:     addr,
+		HostKeyPath:    keyPath,
+		BaseURL:        "http://localhost:8080",
+		AllowAnonymous: true,
+	}
 
-	srv := sftpd.New(cfg, st, repo)
+	srv := sftpd.New(cfg, st, repo, sshkeys.NewMemoryRepository())
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	go srv.ListenAndServe(ctx)
@@ -253,6 +294,7 @@ func TestUpload_StorageError(t *testing.T) {
 
 	clientCfg := &ssh.ClientConfig{
 		User:            "anon",
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(newSigner(t))},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 	conn, err := ssh.Dial("tcp", addr, clientCfg)
@@ -271,4 +313,89 @@ func TestUpload_StorageError(t *testing.T) {
 		t.Fatal("expected error due to storage failure, got nil")
 	}
 	_ = strings.Contains(err.Error(), "") // suppress unused warning
+}
+
+func TestAuth_RegisteredKeySetsOwner(t *testing.T) {
+	dir := t.TempDir()
+	keys := sshkeys.NewMemoryRepository()
+	signer := newSigner(t)
+	registerKey(t, keys, signer, "owner@example.com")
+
+	addr, repo, _ := startServerWith(t, dir, keys, false)
+	client := sftpClientKey(t, addr, signer)
+
+	f, err := client.Create("owned.txt")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	io.WriteString(f, "x")
+	if err := f.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	shares, err := repo.ListByOwner(context.Background(), "owner@example.com")
+	if err != nil {
+		t.Fatalf("ListByOwner: %v", err)
+	}
+	if len(shares) != 1 {
+		t.Fatalf("got %d owned shares, want 1", len(shares))
+	}
+	if shares[0].FileName != "owned.txt" {
+		t.Errorf("FileName = %q, want owned.txt", shares[0].FileName)
+	}
+}
+
+func TestAuth_AnonymousUploadHasNoOwner(t *testing.T) {
+	dir := t.TempDir()
+	addr, repo := startServer(t, dir) // anon=true, empty key repo
+	client := sftpClient(t, addr)     // unregistered key
+
+	f, _ := client.Create("anon.txt")
+	io.WriteString(f, "x")
+	if err := f.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	owned, err := repo.ListByOwner(context.Background(), "")
+	if err != nil {
+		t.Fatalf("ListByOwner: %v", err)
+	}
+	if len(owned) != 1 {
+		t.Fatalf("got %d unowned shares, want 1", len(owned))
+	}
+}
+
+func TestAuth_UnknownKeyRejectedWhenAnonymousDisabled(t *testing.T) {
+	dir := t.TempDir()
+	addr, _, _ := startServerWith(t, dir, sshkeys.NewMemoryRepository(), false)
+
+	clientCfg := &ssh.ClientConfig{
+		User:            "anon",
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(newSigner(t))},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         2 * time.Second,
+	}
+	conn, err := ssh.Dial("tcp", addr, clientCfg)
+	if err == nil {
+		conn.Close()
+		t.Fatal("expected auth failure for unknown key, got success")
+	}
+}
+
+func TestAuth_KeylessClientRejected(t *testing.T) {
+	// With a public-key handler always installed, the "none" method is rejected
+	// and a client offering no key cannot connect even in anonymous mode.
+	dir := t.TempDir()
+	addr, _ := startServer(t, dir) // anon=true
+
+	clientCfg := &ssh.ClientConfig{
+		User:            "anon",
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         2 * time.Second,
+	}
+	conn, err := ssh.Dial("tcp", addr, clientCfg)
+	if err == nil {
+		conn.Close()
+		t.Fatal("expected auth failure for keyless client, got success")
+	}
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sshkeys"
 	"github.com/rispycz/sshbin/internal/storage"
 	"github.com/rispycz/sshbin/internal/userprefs"
 )
@@ -38,10 +39,11 @@ type Server struct {
 	storage storage.Storage
 	auth    *auth.Manager
 	prefs   userprefs.Repository
+	keys    sshkeys.Repository
 }
 
-func New(cfg Config, repo sharing.Repository, st storage.Storage, authMgr *auth.Manager, prefs userprefs.Repository) *Server {
-	return &Server{cfg: cfg, repo: repo, storage: st, auth: authMgr, prefs: prefs}
+func New(cfg Config, repo sharing.Repository, st storage.Storage, authMgr *auth.Manager, prefs userprefs.Repository, keys sshkeys.Repository) *Server {
+	return &Server{cfg: cfg, repo: repo, storage: st, auth: authMgr, prefs: prefs, keys: keys}
 }
 
 func (s *Server) ListenAndServe(ctx context.Context) error {
@@ -63,6 +65,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		storage:       s.storage,
 		auth:          s.auth,
 		prefs:         s.prefs,
+		keys:          s.keys,
 		baseURL:       s.cfg.BaseURL,
 		host:          hostFromURL(s.cfg.BaseURL),
 		secureCookies: strings.HasPrefix(s.cfg.BaseURL, "https://"),
@@ -92,6 +95,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux.HandleFunc("GET /api/profile", h.requireSessionAPI(h.apiProfileGet))
 	mux.HandleFunc("PUT /api/profile", h.requireSessionAPI(h.apiProfileSave))
 	mux.HandleFunc("DELETE /api/profile", h.requireSessionAPI(h.apiProfileDeleteAll))
+	mux.HandleFunc("GET /api/keys", h.requireSessionAPI(h.apiKeysList))
+	mux.HandleFunc("POST /api/keys", h.requireSessionAPI(h.apiKeysAdd))
+	mux.HandleFunc("DELETE /api/keys/{id}", h.requireSessionAPI(h.apiKeysDelete))
 
 	// Public share access (the /s/{id} page itself is the SPA shell).
 	mux.HandleFunc("GET /api/s/{id}", h.apiShareView)

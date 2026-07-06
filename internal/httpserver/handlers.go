@@ -17,6 +17,7 @@ import (
 
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sshkeys"
 	"github.com/rispycz/sshbin/internal/storage"
 	"github.com/rispycz/sshbin/internal/userprefs"
 )
@@ -26,6 +27,7 @@ type handler struct {
 	storage       storage.Storage
 	auth          *auth.Manager
 	prefs         userprefs.Repository
+	keys          sshkeys.Repository
 	baseURL       string
 	host          string
 	secureCookies bool
