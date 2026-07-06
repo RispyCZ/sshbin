@@ -6,12 +6,12 @@
 	layer4 {
 		:2022 {
 			route {
-				proxy app:2022
+				proxy sshbin:2022
 			}
 		}
 	}
 }
 
 https://{$SSHBIN_BASE_URL} {
-	reverse_proxy app:8080
+	reverse_proxy sshbin:8080
 }

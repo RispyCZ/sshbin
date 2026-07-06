@@ -1,7 +1,4 @@
-ARG NODE_IMAGE=""
-ARG GOLANG_IMAGE=""
-ARG RUNTIME_IMAGE=""
-
+ARG NODE_IMAGE=node:24-slim GOLANG_IMAGE=golang:1.26.3 RUNTIME_IMAGE=gcr.io/distroless/static-debian13
 FROM ${NODE_IMAGE} AS frontend_build
 ENV CI=true
 RUN apt-get update \
@@ -22,4 +19,5 @@ RUN CGO_ENABLED=0 go build -o /out/sshbin ./cmd/sshbin
 
 FROM ${RUNTIME_IMAGE}
 COPY --from=build /out/sshbin /sshbin
+WORKDIR /data
 ENTRYPOINT ["/sshbin"]

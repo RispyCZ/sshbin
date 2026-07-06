@@ -49,4 +49,8 @@ dist
 .vite
 *.local
 
+# Enviroment variables
 .env*
+
+# Docker files
+docker
