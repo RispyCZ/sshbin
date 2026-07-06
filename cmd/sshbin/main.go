@@ -5,12 +5,14 @@ import (
 	"flag"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/httpserver"
+	"github.com/rispycz/sshbin/internal/pruner"
 	"github.com/rispycz/sshbin/internal/sftp"
 	"github.com/rispycz/sshbin/internal/sqlstore"
 	"github.com/rispycz/sshbin/internal/storage"
@@ -33,6 +35,8 @@ func main() {
 	smtpFrom := flagString("smtp-from", "", "From address for login-code emails")
 	smtpInsecure := flagBool("smtp-insecure", false, "skip SMTP TLS certificate verification (dev only, allows self-signed)")
 	allowAnon := flagBool("allow-anonymous", false, "allow SFTP uploads from unrecognized/anonymous SSH keys (registered keys always allowed)")
+	pruneInterval := flagDuration("prune-interval", time.Hour, "how often to prune expired and orphaned blobs (0 disables)")
+	pruneUnconfiguredAfter := flagDuration("prune-unconfigured-after", 72*time.Hour, "prune uploads never configured within this window")
 	flag.Parse()
 
 	db, err := sqlstore.Open(*dsn)
@@ -98,6 +102,15 @@ func main() {
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error { return sftpSrv.ListenAndServe(ctx) })
 	g.Go(func() error { return webSrv.ListenAndServe(ctx) })
+
+	if *pruneInterval > 0 {
+		pr := pruner.New(repo, st, pruner.Config{
+			Interval:          *pruneInterval,
+			UnconfiguredAfter: *pruneUnconfiguredAfter,
+		})
+		g.Go(func() error { return pr.Run(ctx) })
+		log.Info("blob pruner enabled", "interval", *pruneInterval, "unconfiguredAfter", *pruneUnconfiguredAfter)
+	}
 
 	log.Info("sshbin started", "sftp", *sftpAddr, "web", *webAddr)
 	if err := g.Wait(); err != nil {

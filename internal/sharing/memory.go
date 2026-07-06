@@ -3,6 +3,7 @@ package sharing
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 type MemoryRepository struct {
@@ -72,4 +73,26 @@ func (r *MemoryRepository) DeleteByOwner(ctx context.Context, email string) erro
 		}
 	}
 	return nil
+}
+
+func (r *MemoryRepository) Prunable(ctx context.Context, now, unconfiguredBefore time.Time) ([]Sharing, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var out []Sharing
+	for _, s := range r.records {
+		if s.Expired(now) || (!s.Configured && s.CreatedAt.Before(unconfiguredBefore)) {
+			out = append(out, s)
+		}
+	}
+	return out, nil
+}
+
+func (r *MemoryRepository) FileIDs(ctx context.Context) ([]string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	ids := make([]string, 0, len(r.records))
+	for _, s := range r.records {
+		ids = append(ids, s.FileID)
+	}
+	return ids, nil
 }

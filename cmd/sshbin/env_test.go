@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // stubEnv replaces the env lookup with a fixed map for the duration of a test.
 func stubEnv(t *testing.T, m map[string]string) {
@@ -116,6 +119,29 @@ func TestEnvDefaultBool(t *testing.T) {
 		envDefaultBool("dev", false)
 		if !*fatal {
 			t.Error("expected fatalf on malformed bool")
+		}
+	})
+}
+
+func TestEnvDefaultDuration(t *testing.T) {
+	t.Run("valid env parsed", func(t *testing.T) {
+		stubEnv(t, map[string]string{"SSHBIN_PRUNE_INTERVAL": " 30m "})
+		if got := envDefaultDuration("prune-interval", time.Hour); got != 30*time.Minute {
+			t.Errorf("got %v, want 30m", got)
+		}
+	})
+	t.Run("unset falls back", func(t *testing.T) {
+		stubEnv(t, map[string]string{})
+		if got := envDefaultDuration("prune-interval", time.Hour); got != time.Hour {
+			t.Errorf("got %v, want 1h", got)
+		}
+	})
+	t.Run("malformed is fatal", func(t *testing.T) {
+		stubEnv(t, map[string]string{"SSHBIN_PRUNE_INTERVAL": "notaduration"})
+		fatal := captureFatal(t)
+		envDefaultDuration("prune-interval", time.Hour)
+		if !*fatal {
+			t.Error("expected fatalf on malformed duration")
 		}
 	})
 }

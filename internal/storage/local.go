@@ -34,3 +34,43 @@ func (s *LocalStorage) Open(ctx context.Context, id string, name string) (io.Rea
 	}
 	return f, nil
 }
+
+// Delete removes the per-upload directory. A missing directory is not an error.
+func (s *LocalStorage) Delete(ctx context.Context, id string, name string) error {
+	return os.RemoveAll(filepath.Join(s.BaseDir, id))
+}
+
+// List returns one BlobInfo per stored file. Each upload lives in its own
+// <BaseDir>/<id>/ directory holding a single file. A missing BaseDir yields an
+// empty list.
+func (s *LocalStorage) List(ctx context.Context) ([]BlobInfo, error) {
+	dirs, err := os.ReadDir(s.BaseDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var blobs []BlobInfo
+	for _, d := range dirs {
+		if !d.IsDir() {
+			continue
+		}
+		id := d.Name()
+		entries, err := os.ReadDir(filepath.Join(s.BaseDir, id))
+		if err != nil {
+			return nil, err
+		}
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			info, err := e.Info()
+			if err != nil {
+				return nil, err
+			}
+			blobs = append(blobs, BlobInfo{ID: id, Name: e.Name(), ModTime: info.ModTime()})
+		}
+	}
+	return blobs, nil
+}

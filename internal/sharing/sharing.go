@@ -93,4 +93,10 @@ type Repository interface {
 	ListByOwner(ctx context.Context, email string) ([]Sharing, error)
 	Delete(ctx context.Context, id string) error
 	DeleteByOwner(ctx context.Context, email string) error
+	// Prunable returns shares eligible for pruning: expired shares (ExpiresAt
+	// before now) or unconfigured uploads created before unconfiguredBefore.
+	Prunable(ctx context.Context, now, unconfiguredBefore time.Time) ([]Sharing, error)
+	// FileIDs returns every FileID referenced by a share, used to detect blobs
+	// with no matching record.
+	FileIDs(ctx context.Context) ([]string, error)
 }

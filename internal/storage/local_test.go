@@ -78,6 +78,69 @@ func TestLocalStorage_OpenMissing(t *testing.T) {
 	}
 }
 
+func TestLocalStorage_Delete(t *testing.T) {
+	dir := t.TempDir()
+	s := &storage.LocalStorage{BaseDir: dir}
+	ctx := context.Background()
+
+	w, _ := s.Create(ctx, "id1", "file.txt")
+	w.Close()
+
+	if err := s.Delete(ctx, "id1", "file.txt"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if _, err := s.Open(ctx, "id1", "file.txt"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("Open after Delete: %v, want ErrNotFound", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "id1")); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("id dir still present: %v", err)
+	}
+}
+
+func TestLocalStorage_DeleteMissing_NoError(t *testing.T) {
+	s := &storage.LocalStorage{BaseDir: t.TempDir()}
+	if err := s.Delete(context.Background(), "nope", "x.txt"); err != nil {
+		t.Fatalf("Delete missing: %v, want nil", err)
+	}
+}
+
+func TestLocalStorage_List(t *testing.T) {
+	dir := t.TempDir()
+	s := &storage.LocalStorage{BaseDir: dir}
+	ctx := context.Background()
+
+	for _, b := range []struct{ id, name string }{{"id1", "a.txt"}, {"id2", "b.bin"}} {
+		w, _ := s.Create(ctx, b.id, b.name)
+		w.Close()
+	}
+
+	blobs, err := s.List(ctx)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	got := map[string]string{}
+	for _, b := range blobs {
+		got[b.ID] = b.Name
+		if b.ModTime.IsZero() {
+			t.Errorf("blob %s has zero ModTime", b.ID)
+		}
+	}
+	if got["id1"] != "a.txt" || got["id2"] != "b.bin" {
+		t.Errorf("List = %v, want id1/a.txt id2/b.bin", got)
+	}
+}
+
+func TestLocalStorage_List_MissingBaseDir(t *testing.T) {
+	s := &storage.LocalStorage{BaseDir: filepath.Join(t.TempDir(), "nonexistent")}
+	blobs, err := s.List(context.Background())
+	if err != nil {
+		t.Fatalf("List missing BaseDir: %v", err)
+	}
+	if len(blobs) != 0 {
+		t.Errorf("List = %v, want empty", blobs)
+	}
+}
+
 func TestLocalStorage_MissingBaseDir(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "nonexistent")
 	s := &storage.LocalStorage{BaseDir: dir}

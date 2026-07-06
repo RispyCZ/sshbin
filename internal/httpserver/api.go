@@ -167,6 +167,9 @@ func (h *handler) apiDeleteShare(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, "This share belongs to someone else.")
 		return
 	}
+	if err := h.storage.Delete(r.Context(), s.FileID, s.FileName); err != nil {
+		log.Error("delete blob", "id", s.FileID, "err", err)
+	}
 	if err := h.repo.Delete(r.Context(), id); err != nil {
 		log.Error("delete share", "id", id, "err", err)
 		writeErr(w, http.StatusInternalServerError, "Could not delete share.")
@@ -458,6 +461,19 @@ func (h *handler) apiKeysDelete(w http.ResponseWriter, r *http.Request) {
 func (h *handler) apiProfileDeleteAll(w http.ResponseWriter, r *http.Request) {
 	sess, _ := h.currentSession(r)
 	email := sess.Email
+	// Remove the underlying blobs before dropping the rows; DeleteByOwner only
+	// clears records, so the file list must be gathered first.
+	shares, err := h.repo.ListByOwner(r.Context(), email)
+	if err != nil {
+		log.Error("list shares by owner", "email", email, "err", err)
+		writeErr(w, http.StatusInternalServerError, "Could not delete data.")
+		return
+	}
+	for _, s := range shares {
+		if err := h.storage.Delete(r.Context(), s.FileID, s.FileName); err != nil {
+			log.Error("delete blob", "id", s.FileID, "err", err)
+		}
+	}
 	if err := h.repo.DeleteByOwner(r.Context(), email); err != nil {
 		log.Error("delete shares by owner", "email", email, "err", err)
 		writeErr(w, http.StatusInternalServerError, "Could not delete data.")

@@ -3,6 +3,7 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/storage"
 )
 
 func TestAPISession_Unauthenticated(t *testing.T) {
@@ -86,8 +88,9 @@ func TestAPIShares_Unauthenticated(t *testing.T) {
 
 func TestAPIDeleteShare_Owner(t *testing.T) {
 	repo := sharing.NewMemoryRepository()
-	repo.Create(context.Background(), sharing.Sharing{ID: "abc", OwnerEmail: "owner@example.com"})
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com"})
 	h, sender := newTestHandler(t, repo)
+	seedFile(t, h, "abc", "f.txt", "payload")
 
 	req := httptest.NewRequest("DELETE", "/api/shares/abc", nil)
 	req.SetPathValue("id", "abc")
@@ -100,6 +103,28 @@ func TestAPIDeleteShare_Owner(t *testing.T) {
 	}
 	if _, err := repo.Get(context.Background(), "abc"); err == nil {
 		t.Error("share should be deleted")
+	}
+	if _, err := h.storage.Open(context.Background(), "abc", "f.txt"); !errors.Is(err, storage.ErrNotFound) {
+		t.Errorf("blob should be deleted, Open err = %v", err)
+	}
+}
+
+func TestAPIProfileDeleteAll_RemovesBlobs(t *testing.T) {
+	repo := sharing.NewMemoryRepository()
+	repo.Create(context.Background(), sharing.Sharing{ID: "abc", FileID: "abc", FileName: "f.txt", OwnerEmail: "owner@example.com"})
+	h, sender := newTestHandler(t, repo)
+	seedFile(t, h, "abc", "f.txt", "payload")
+
+	req := httptest.NewRequest("DELETE", "/api/profile", nil)
+	req.AddCookie(login(t, h, sender, "owner@example.com"))
+	rec := httptest.NewRecorder()
+
+	h.apiProfileDeleteAll(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", rec.Code)
+	}
+	if _, err := h.storage.Open(context.Background(), "abc", "f.txt"); !errors.Is(err, storage.ErrNotFound) {
+		t.Errorf("blob should be deleted, Open err = %v", err)
 	}
 }
 

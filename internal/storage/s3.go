@@ -85,6 +85,45 @@ func (w *s3WriteCloser) Close() error {
 	return <-w.errCh
 }
 
+// Delete removes the object. S3 DeleteObject is idempotent (deleting a missing
+// key succeeds), matching the no-op contract.
+func (s *S3Storage) Delete(ctx context.Context, id, name string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(s.objectKey(id, name)),
+	})
+	return err
+}
+
+// List enumerates every stored blob under the configured prefix. Keys are
+// shaped <prefix>/<id>/<name>; anything not matching that layout is skipped.
+func (s *S3Storage) List(ctx context.Context) ([]BlobInfo, error) {
+	var listPrefix string
+	if s.prefix != "" {
+		listPrefix = s.prefix + "/"
+	}
+	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(s.bucket),
+		Prefix: aws.String(listPrefix),
+	})
+	var blobs []BlobInfo
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, obj := range page.Contents {
+			rel := strings.TrimPrefix(aws.ToString(obj.Key), listPrefix)
+			id, name, ok := strings.Cut(rel, "/")
+			if !ok || id == "" || name == "" {
+				continue
+			}
+			blobs = append(blobs, BlobInfo{ID: id, Name: name, ModTime: aws.ToTime(obj.LastModified)})
+		}
+	}
+	return blobs, nil
+}
+
 func (s *S3Storage) Open(ctx context.Context, id, name string) (io.ReadSeekCloser, error) {
 	key := s.objectKey(id, name)
 	head, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
