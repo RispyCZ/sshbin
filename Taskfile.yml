@@ -71,3 +71,9 @@ tasks:
     cmds:
       - '{{.GO}} clean'
       - rm -rf bin/
+  ci:
+    desc: Runs on every commit
+    cmds:
+      - '{{.GO}} vet ./...'
+      - '{{.GO}} fmt ./...'
+      - '{{.GO}} test -cover ./...'
