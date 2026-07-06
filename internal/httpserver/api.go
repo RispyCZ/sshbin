@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/google/uuid"
 
 	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sshkeys"
 	"github.com/rispycz/sshbin/internal/userprefs"
 )
 
@@ -365,6 +367,94 @@ func (h *handler) apiProfileSave(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type keyDTO struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Fingerprint string  `json:"fingerprint"`
+	CreatedAt   string  `json:"createdAt"`
+	LastUsedAt  *string `json:"lastUsedAt"`
+}
+
+func toKeyDTO(k sshkeys.PublicKey) keyDTO {
+	var lastUsed *string
+	if k.LastUsedAt != nil {
+		v := k.LastUsedAt.Format(time.RFC3339)
+		lastUsed = &v
+	}
+	return keyDTO{
+		ID:          k.ID,
+		Title:       k.Title,
+		Fingerprint: k.Fingerprint,
+		CreatedAt:   k.CreatedAt.Format(time.RFC3339),
+		LastUsedAt:  lastUsed,
+	}
+}
+
+func (h *handler) apiKeysList(w http.ResponseWriter, r *http.Request) {
+	sess, _ := h.currentSession(r)
+	keys, err := h.keys.ListByEmail(r.Context(), sess.Email)
+	if err != nil {
+		log.Error("list ssh keys", "email", sess.Email, "err", err)
+		writeErr(w, http.StatusInternalServerError, "Could not load keys.")
+		return
+	}
+	out := make([]keyDTO, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, toKeyDTO(k))
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+func (h *handler) apiKeysAdd(w http.ResponseWriter, r *http.Request) {
+	sess, _ := h.currentSession(r)
+	var in struct {
+		Title string `json:"title"`
+		Key   string `json:"key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		writeErr(w, http.StatusBadRequest, "Invalid request.")
+		return
+	}
+	authorizedKey, fingerprint, err := sshkeys.Parse(in.Key)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "That doesn't look like a valid SSH public key.")
+		return
+	}
+	k := sshkeys.PublicKey{
+		ID:            uuid.New().String(),
+		Email:         sess.Email,
+		Title:         strings.TrimSpace(in.Title),
+		Fingerprint:   fingerprint,
+		AuthorizedKey: authorizedKey,
+		CreatedAt:     time.Now(),
+	}
+	if err := h.keys.Add(r.Context(), k); err != nil {
+		if errors.Is(err, sshkeys.ErrDuplicate) {
+			writeErr(w, http.StatusConflict, "This key is already registered.")
+			return
+		}
+		log.Error("add ssh key", "email", sess.Email, "err", err)
+		writeErr(w, http.StatusInternalServerError, "Could not add key.")
+		return
+	}
+	writeJSON(w, http.StatusCreated, toKeyDTO(k))
+}
+
+func (h *handler) apiKeysDelete(w http.ResponseWriter, r *http.Request) {
+	sess, _ := h.currentSession(r)
+	id := r.PathValue("id")
+	if err := h.keys.Delete(r.Context(), id, sess.Email); err != nil {
+		if errors.Is(err, sshkeys.ErrNotFound) {
+			writeErr(w, http.StatusNotFound, "Key not found.")
+			return
+		}
+		log.Error("delete ssh key", "id", id, "err", err)
+		writeErr(w, http.StatusInternalServerError, "Could not delete key.")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *handler) apiProfileDeleteAll(w http.ResponseWriter, r *http.Request) {
 	sess, _ := h.currentSession(r)
 	email := sess.Email
@@ -375,6 +465,9 @@ func (h *handler) apiProfileDeleteAll(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.prefs.Delete(r.Context(), email); err != nil {
 		log.Error("delete user prefs", "email", email, "err", err)
+	}
+	if err := h.keys.DeleteByEmail(r.Context(), email); err != nil {
+		log.Error("delete ssh keys", "email", email, "err", err)
 	}
 	if err := h.auth.DeleteSessionsByEmail(email); err != nil {
 		log.Error("delete sessions", "email", email, "err", err)

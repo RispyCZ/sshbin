@@ -16,6 +16,7 @@ import { Login } from "../routes/Login.tsx";
 import { Profile } from "../routes/Profile.tsx";
 import { Setup } from "../routes/Setup.tsx";
 import { Shares } from "../routes/Shares.tsx";
+import { SSHKeys } from "../routes/SSHKeys.tsx";
 import { Logo } from "./Logo.tsx";
 import { useNotify } from "./NotifyProvider.tsx";
 import { ThemeToggle } from "./ThemeToggle.tsx";
@@ -99,6 +100,14 @@ export function App() {
             element={
               <RequireAuth authed={auth.state === "in"}>
                 <Profile onSignedOut={() => setAuth({ state: "out" })} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/keys"
+            element={
+              <RequireAuth authed={auth.state === "in"}>
+                <SSHKeys />
               </RequireAuth>
             }
           />

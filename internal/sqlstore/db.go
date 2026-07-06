@@ -61,3 +61,6 @@ func (s *Store) Sessions() *SessionStore { return &SessionStore{db: s.db, dialec
 
 // UserPrefs returns a userprefs.Repository backed by this store.
 func (s *Store) UserPrefs() *UserPrefsRepo { return &UserPrefsRepo{db: s.db, dialect: s.dialect} }
+
+// SSHKeys returns an sshkeys.Repository backed by this store.
+func (s *Store) SSHKeys() *SSHKeysRepo { return &SSHKeysRepo{db: s.db, dialect: s.dialect} }

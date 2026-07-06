@@ -5,6 +5,7 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import FolderIcon from "@mui/icons-material/Folder";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonIcon from "@mui/icons-material/Person";
+import VpnKeyIcon from "@mui/icons-material/VpnKey";
 
 export function UserMenu({ email, onLogout }: { email: string; onLogout: () => void }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -45,6 +46,12 @@ export function UserMenu({ email, onLogout }: { email: string; onLogout: () => v
             <FolderIcon fontSize="small" />
           </ListItemIcon>
           My shares
+        </MenuItem>
+        <MenuItem component={RouterLink} to="/keys" onClick={close}>
+          <ListItemIcon>
+            <VpnKeyIcon fontSize="small" />
+          </ListItemIcon>
+          SSH keys
         </MenuItem>
         <MenuItem component={RouterLink} to="/profile" onClick={close}>
           <ListItemIcon>

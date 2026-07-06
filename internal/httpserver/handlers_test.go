@@ -11,6 +11,7 @@ import (
 
 	"github.com/rispycz/sshbin/internal/auth"
 	"github.com/rispycz/sshbin/internal/sharing"
+	"github.com/rispycz/sshbin/internal/sshkeys"
 	"github.com/rispycz/sshbin/internal/storage"
 	"github.com/rispycz/sshbin/internal/userprefs"
 )
@@ -34,6 +35,7 @@ func newTestHandler(t *testing.T, repo sharing.Repository) (*handler, *testSende
 		storage: &storage.LocalStorage{BaseDir: t.TempDir()},
 		auth:    auth.NewManager(sender, auth.NewMemorySessionStore(), auth.Options{}),
 		prefs:   userprefs.NewMemoryRepository(),
+		keys:    sshkeys.NewMemoryRepository(),
 		baseURL: "http://example.com",
 		host:    "example.com",
 		secret:  []byte("test-secret-32-bytes-padding-xxx"),
