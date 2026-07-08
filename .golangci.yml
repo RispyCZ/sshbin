@@ -10,3 +10,16 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+  exclusions:
+    presets:
+      # Excludes the classic false positives: unchecked Close/Flush/print/etc.
+      - std-error-handling
+    rules:
+      # Tests routinely ignore setup errors; keep errcheck for prod code only.
+      - path: _test\.go
+        linters:
+          - errcheck
+      # Intentionally-ignored writes/shutdown/rollback in prod cleanup paths.
+      - linters:
+          - errcheck
+        source: (\.Write|\.Shutdown|\.Rollback)
