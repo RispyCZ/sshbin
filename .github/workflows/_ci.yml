@@ -84,9 +84,11 @@ jobs:
         with:
           node-version: '24'
           cache: true
+      # `vp test` can't resolve the vitest bin in this vite-plus-test build;
+      # run the package.json "test" script (node .../vitest.mjs run) instead.
       - name: Vitest
         working-directory: web
-        run: vp install && vp test
+        run: vp install && vp run test
 
   test-e2e:
     name: Test E2E
