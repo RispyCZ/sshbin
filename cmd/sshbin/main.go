@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os/signal"
 	"syscall"
 	"time"
@@ -17,6 +18,9 @@ import (
 	"github.com/rispycz/sshbin/internal/sqlstore"
 	"github.com/rispycz/sshbin/internal/storage"
 )
+
+// version is set at build time via -ldflags "-X main.version=...".
+var version = "dev"
 
 func main() {
 	// Every flag also reads SSHBIN_<NAME> (e.g. -sftp-listen -> SSHBIN_SFTP_LISTEN).
@@ -37,7 +41,13 @@ func main() {
 	allowAnon := flagBool("allow-anonymous", false, "allow SFTP uploads from unrecognized/anonymous SSH keys (registered keys always allowed)")
 	pruneInterval := flagDuration("prune-interval", time.Hour, "how often to prune expired and orphaned blobs (0 disables)")
 	pruneUnconfiguredAfter := flagDuration("prune-unconfigured-after", 72*time.Hour, "prune uploads never configured within this window")
+	showVersion := flagBool("version", false, "print version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	db, err := sqlstore.Open(*dsn)
 	if err != nil {
@@ -112,7 +122,7 @@ func main() {
 		log.Info("blob pruner enabled", "interval", *pruneInterval, "unconfiguredAfter", *pruneUnconfiguredAfter)
 	}
 
-	log.Info("sshbin started", "sftp", *sftpAddr, "web", *webAddr)
+	log.Info("sshbin started", "version", version, "sftp", *sftpAddr, "web", *webAddr)
 	if err := g.Wait(); err != nil {
 		log.Fatal("server", "err", err)
 	}

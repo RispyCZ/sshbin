@@ -8,7 +8,7 @@ before:
 
 builds:
   - id: sshbin
-    main: .
+    main: ./cmd/sshbin
     binary: sshbin
     env:
       - CGO_ENABLED=0
@@ -19,7 +19,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X github.com/rispycz/sshbin/cmd.version={{ .Version }}
+      - -s -w -X main.version={{ .Version }}
 
 archives:
   - id: default
@@ -29,6 +29,10 @@ archives:
 
 checksum:
   name_template: checksums.txt
+
+sboms:
+  - id: archive
+    artifacts: archive
 
 changelog:
   use: git
