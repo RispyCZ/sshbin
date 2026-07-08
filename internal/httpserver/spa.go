@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/rispycz/sshbin/web"
 )
 
@@ -17,8 +18,8 @@ import (
 // loads modules from the Vite dev server (HMR); in prod it reads the embedded
 // build manifest and serves hashed assets from the embedded dist directory.
 type spaServer struct {
-	shell  []byte   // fully rendered index document
-	assets fs.FS    // embedded dist, nil in dev (Vite serves assets)
+	shell  []byte // fully rendered index document
+	assets fs.FS  // embedded dist, nil in dev (Vite serves assets)
 	files  http.Handler
 }
 
@@ -128,5 +129,8 @@ func (s *spaServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(s.shell)
+	if _, err := w.Write(s.shell); err != nil {
+		log.Error(err)
+	}
+
 }

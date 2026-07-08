@@ -5,13 +5,14 @@ import (
 	"errors"
 	"mime"
 
-	"github.com/charmbracelet/log"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/charmbracelet/log"
 
 	qrcode "github.com/skip2/go-qrcode"
 
@@ -56,7 +57,9 @@ func (h *handler) shareQR(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	w.Write(png)
+	if _, err := w.Write(png); err != nil {
+		log.Error(err)
+	}
 }
 
 func (h *handler) download(w http.ResponseWriter, r *http.Request) {
@@ -164,7 +167,9 @@ func (h *handler) render(w http.ResponseWriter, _ *http.Request, status int, pag
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
-	buf.WriteTo(w)
+	if _, err := buf.WriteTo(w); err != nil {
+		log.Error(err)
+	}
 }
 
 func errData(status int, msg string) map[string]any {

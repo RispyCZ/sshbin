@@ -88,7 +88,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		<-ctx.Done()
 		shutCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 		defer cancel()
-		srv.Shutdown(shutCtx)
+		if err := srv.Shutdown(shutCtx); err != nil {
+			log.Fatal(err)
+		}
 	}()
 
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, ssh.ErrServerClosed) {
