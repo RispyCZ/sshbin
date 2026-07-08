@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Stage 1: build the React SPA with the Vite+ (vp) toolchain.
-FROM node:22-slim AS web
+FROM node:24-slim AS web
 # vp is a Rust binary that needs system CA certs for HTTPS (registry) downloads;
 # node:22-slim ships without them.
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
