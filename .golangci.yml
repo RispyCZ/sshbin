@@ -22,4 +22,6 @@ linters:
       # Intentionally-ignored writes/shutdown/rollback in prod cleanup paths.
       - linters:
           - errcheck
-        source: (\.Write|\.Shutdown|\.Rollback)
+        exclude-functions:
+          - (*database/sql.Tx).Rollback
+          - (*net/http.Server).Shutdown
