@@ -6,17 +6,50 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  security-events: write
 
 jobs:
-  release:
-    runs-on: ubuntu-22.04
+  ci:
+    uses: ./.github/workflows/_ci.yml
+
+  docker:
+    needs: ci
+    uses: ./.github/workflows/_docker.yml
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    with:
+      push: true
+      tags: |
+        type=semver,pattern={{version}}
+        type=semver,pattern={{major}}.{{minor}}
+        type=raw,value=latest
+    secrets: inherit
+
+  goreleaser:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: '24'
+          cache: true
+      # Build the SPA so //go:embed all:dist has content before goreleaser compiles.
+      - name: Build SPA
+        working-directory: web
+        run: vp install && vp build
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      # syft powers the goreleaser sboms block; it must be on PATH.
+      - uses: anchore/sbom-action/download-syft@v0
       - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"

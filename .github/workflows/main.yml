@@ -1,0 +1,28 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_ci.yml
+
+  docker:
+    needs: ci
+    uses: ./.github/workflows/_docker.yml
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    with:
+      push: true
+      tags: |
+        type=raw,value=latest
+        type=sha
+    secrets: inherit

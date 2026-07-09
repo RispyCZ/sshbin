@@ -1,0 +1,65 @@
+name: Docker
+
+# Reusable image build + push + Trivy scan. Called by main.yml (latest) and
+# release.yml (semver). Tag rules are passed as docker/metadata-action directives.
+on:
+  workflow_call:
+    inputs:
+      tags:
+        description: docker/metadata-action tag directives (multiline)
+        type: string
+        required: true
+      push:
+        description: whether to push the image
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+env:
+  IMAGE: ghcr.io/rispycz/sshbin
+
+jobs:
+  docker:
+    name: Build & scan image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: ${{ inputs.tags }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          # Report-only: never block the pipeline. Findings land in Security tab.
+          exit-code: "0"
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
